@@ -8,32 +8,53 @@ pnpm-debug.log*
 lerna-debug.log*
 *.zip
 
+# Build output
 dist-ssr
+dist
 *.local
 
-# .gitignore
-# Node files
+# Node modules
+node_modules/
 /frontend/node_modules/
+/backend/node_modules/
 /frontend/dist/
 
-/frontend/.env
-/backend/.env
+# Environment and Credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+credentials.json
+client_secret.json
+
+# Crypto and Hashing (Project specific)
+crypto-js.js
+enc_dec.html
+/backend/crypto-js.js
+/backend/enc_dec.html
+
+# Python
 __pycache__/
 *.pyc
-
-# Python virtual environment
-/backend/venv/
-/backend/.venv/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # OS files
 .DS_Store
-
+Thumbs.db
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suocd
 *.ntvs*
 *.njsproj

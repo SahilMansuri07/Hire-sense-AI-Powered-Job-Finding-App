@@ -1,0 +1,28 @@
+const en = {
+	Email_already_exists: "Email already exists",
+	Mobile_number_already_exists: "Mobile number already exists",
+	Social_ID_already_exists: "Social ID already exists",
+	User_created_successfully: "User created successfully",
+	Internal_Server_Error: "Internal Server Error",
+	Invalid_email_or_password: "Invalid email or password",
+	Login_successfully: "Login successfully",
+	Job_posted_successfully: "Job posted successfully",
+	Job_generated_successfully: "Job generated successfully",
+	Job_updated_successfully: "Job updated successfully",
+	Job_deleted_successfully: "Job deleted successfully",
+	Job_not_found: "Job not found",
+	rest_keywords_required_fields_missing: "Required fields are missing",
+	Token_expired_Please_login_again: "Token expired, please login again",
+	Invalid_token: "Invalid token",
+	rest_keywords_unauthorized: "Unauthorized",
+	rest_keywords_error: "Something went wrong",
+	Dashboard_fetched_successfully: "Dashboard fetched successfully",
+	User_not_found: "User not found",
+	User_ID_not_found: "User ID not found",
+	File_required: "File is required",
+	Resume_uploaded_successfully: "Resume uploaded successfully",
+	Job_applications_fetched_successfully: "Job applications fetched successfully",
+	Access_Denied: "Access denied",
+};
+
+export default en;

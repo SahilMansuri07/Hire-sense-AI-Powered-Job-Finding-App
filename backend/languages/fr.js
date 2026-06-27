@@ -1,0 +1,20 @@
+const fr = {
+	Email_already_exists: "البريد الإلكتروني موجود بالفعل",
+	Mobile_number_already_exists: "رقم الجوال موجود بالفعل",
+	Social_ID_already_exists: "معرف تسجيل الدخول الاجتماعي موجود بالفعل",
+	User_created_successfully: "تم إنشاء المستخدم بنجاح",
+	Internal_Server_Error: "خطأ داخلي في الخادم",
+	Invalid_email_or_password: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+	Login_successfully: "تم تسجيل الدخول بنجاح",
+	Job_posted_successfully: "تم نشر الوظيفة بنجاح",
+	Job_generated_successfully: "تم إنشاء وصف الوظيفة بنجاح",
+	Job_updated_successfully: "تم تحديث الوظيفة بنجاح",
+	Job_deleted_successfully: "تم حذف الوظيفة بنجاح",
+	Job_not_found: "لم يتم العثور على الوظيفة",
+	rest_keywords_required_fields_missing: "الحقول المطلوبة مفقودة",
+	Token_expired_Please_login_again: "انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى",
+	Invalid_token: "رمز الوصول غير صالح",
+	rest_keywords_unauthorized: "غير مصرح",
+	rest_keywords_error: "حدث خطأ ما",
+};
+export default fr;
