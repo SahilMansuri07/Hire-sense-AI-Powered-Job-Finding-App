@@ -20,7 +20,7 @@ export function JobSearch() {
   });
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  
   const fetchJobs = async () => {
     setLoading(true);
     try {
@@ -42,8 +42,13 @@ export function JobSearch() {
   };
 
   useEffect(() => {
-    fetchJobs();
-  }, []);
+    // Adding a short timeout to debounce keystrokes slightly
+    const timer = setTimeout(() => {
+      fetchJobs();
+    }, 300);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, filters.location, filters.salary, filters.type, filters.remote, filters.experience]);
   return <div className="min-h-screen bg-[#0f1723] text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}

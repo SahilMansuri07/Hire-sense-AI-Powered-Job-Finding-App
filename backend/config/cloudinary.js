@@ -29,7 +29,7 @@ const uploadBufferToCloudinary = (buffer, filename = null, userId = null, option
 
   return new Promise((resolve, reject) => {
     const uploadOptions = {
-      resource_type: "raw",
+      resource_type: "auto",
       allowed_formats: ["pdf"],
       format: "pdf",
       overwrite: true,

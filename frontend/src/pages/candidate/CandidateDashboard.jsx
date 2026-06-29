@@ -1,13 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Target, TrendingUp, Award, Search, FileText, Brain, Video, Bell, User, Settings } from 'lucide-react';
+import { Target, TrendingUp, Award, Search, FileText, Brain, Video, Bell, User, Settings, X, Upload, LogOut } from 'lucide-react';
 import { RadialBarChart, RadialBar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
-import { getUserDashboardAPI } from '../../api/api';
+import { getUserDashboardAPI, uploadResumeAPI } from '../../api/api';
+import toast from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../../redux/slices/authSlice';
+import { ATSResultDetails } from './ATSResultDetails';
 
 export function CandidateDashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/');
+  };
 
   useEffect(() => {
     getUserDashboardAPI().then(res => {
@@ -15,25 +28,33 @@ export function CandidateDashboard() {
     }).catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+  
   if (loading) return <div className="min-h-screen bg-[#0f1723] text-white flex items-center justify-center">Loading...</div>;
 
-  const atsData = [{ name: 'ATS', value: Number(data?.stats?.atsScore) || 0, fill: '#1f7af9' }];
-  const confidenceData = [{ name: 'Confidence', value: Number(data?.stats?.experienceMatch) || 0, fill: '#bc13fe' }];
-  const alignmentData = [{ name: 'Alignment', value: Number(data?.stats?.skillAlignment) || 0, fill: '#10b981' }];
-  const appliedJobs = data?.appliedJobs || [];
-  const summary = data?.summary || { totalApplications: 0, acceptedCount: 0 };
-  const userProfile = data?.userProfile || {};
+  const {
+    UserName = 'User',
+    totalAppliedJobs = 0,
+    pending = 0,
+    accepted = 0,
+    rejected = 0,
+    recentAppliedJobs = []
+  } = data || {};
+
+  // Retrieve ATS Score from local storage (saved when uploading resume via uploadResumeAPI)
+  let savedAtsScore = 0;
+  let parsedData = {};
+  try {
+    parsedData = JSON.parse(localStorage.getItem('resumeAnalysis') || '{}');
+    savedAtsScore = parsedData["JD Match"] || parsedData["jd_match"] || parsedData["ats_score"] || 0;
+  } catch(e) {}
+  
+  const atsData = [{ name: 'ATS', value: Number(savedAtsScore) || 0, fill: '#1f7af9' }];
 
   const progressData = [
     { month: 'Jan', score: 65 },
     { month: 'Feb', score: 72 },
     { month: 'Mar', score: 78 },
     { month: 'Apr', score: 85 },
-  ];
-
-  const recentInterviews = [
-    { company: 'TechCorp', role: 'Frontend Dev', score: 88, date: 'Apr 15, 2026' },
-    { company: 'StartupXYZ', role: 'React Engineer', score: 92, date: 'Apr 10, 2026' },
   ];
 
   return <div className="min-h-screen bg-[#0f1723] text-white">
@@ -58,8 +79,14 @@ export function CandidateDashboard() {
               <Settings className="w-5 h-5" />
             </button>
             <button onClick={() => navigate('/candidate/profile')} className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-              <User className="w-5 h-5" />
-              <span className="hidden md:block">Profile</span>
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1f7af9] to-[#bc13fe] flex items-center justify-center text-xs font-bold text-white">
+                {user?.name?.charAt(0) || user?.first_name?.charAt(0) || <User className="w-4 h-4" />}
+              </div>
+              <span className="hidden md:block font-medium">{user?.name || user?.first_name || 'Profile'}</span>
+            </button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 rounded-lg transition-colors">
+              <LogOut className="w-5 h-5" />
+              <span className="hidden md:block">Log Out</span>
             </button>
           </div>
         </div>
@@ -69,70 +96,27 @@ export function CandidateDashboard() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Welcome back, {userProfile.name || 'User'}!</h2>
-          <p className="text-gray-400">Here's your career progress overview. Total Applications: {summary.totalApplications}</p>
+          <h2 className="text-3xl font-bold mb-2">Welcome back, {UserName}!</h2>
+          <p className="text-gray-400">Here's your career progress overview. Total Applications: {totalAppliedJobs}</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#1f7af9]/50 hover:shadow-lg hover:shadow-[#1f7af9]/20 transition-all">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">ATS Score</p>
-                <p className="text-4xl font-bold">{atsData[0].value}<span className="text-xl text-gray-400">/100</span></p>
-              </div>
-              <div className="w-20 h-20">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart data={atsData} startAngle={90} endAngle={-270} innerRadius="70%" outerRadius="100%">
-                    <RadialBar dataKey="value" cornerRadius={10} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-[#10b981]">
-              <TrendingUp className="w-4 h-4" />
-              <span>+8% from last week</span>
-            </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#1f7af9]/50 hover:shadow-lg transition-all">
+            <p className="text-sm text-gray-400 mb-1">Total Applied</p>
+            <p className="text-4xl font-bold text-[#1f7af9]">{totalAppliedJobs}</p>
           </div>
-
-          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#bc13fe]/50 hover:shadow-lg hover:shadow-[#bc13fe]/20 transition-all">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Experience Match</p>
-                <p className="text-4xl font-bold">{confidenceData[0].value}<span className="text-xl text-gray-400">%</span></p>
-              </div>
-              <div className="w-20 h-20">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart data={confidenceData} startAngle={90} endAngle={-270} innerRadius="70%" outerRadius="100%">
-                    <RadialBar dataKey="value" cornerRadius={10} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-[#10b981]">
-              <TrendingUp className="w-4 h-4" />
-              <span>+12% improvement</span>
-            </div>
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#f59e0b]/50 hover:shadow-lg transition-all">
+            <p className="text-sm text-gray-400 mb-1">Pending</p>
+            <p className="text-4xl font-bold text-[#f59e0b]">{pending}</p>
           </div>
-
-          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#10b981]/50 hover:shadow-lg hover:shadow-[#10b981]/20 transition-all">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Skill Alignment</p>
-                <p className="text-4xl font-bold">{alignmentData[0].value}<span className="text-xl text-gray-400">%</span></p>
-              </div>
-              <div className="w-20 h-20">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart data={alignmentData} startAngle={90} endAngle={-270} innerRadius="70%" outerRadius="100%">
-                    <RadialBar dataKey="value" cornerRadius={10} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-[#10b981]">
-              <Award className="w-4 h-4" />
-              <span>Excellent match</span>
-            </div>
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#10b981]/50 hover:shadow-lg transition-all">
+            <p className="text-sm text-gray-400 mb-1">Accepted</p>
+            <p className="text-4xl font-bold text-[#10b981]">{accepted}</p>
+          </div>
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#ef4444]/50 hover:shadow-lg transition-all">
+            <p className="text-sm text-gray-400 mb-1">Rejected</p>
+            <p className="text-4xl font-bold text-[#ef4444]">{rejected}</p>
           </div>
         </div>
 
@@ -162,19 +146,29 @@ export function CandidateDashboard() {
         {/* Applied Jobs & Application Status */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl">
-            <h3 className="text-xl font-bold mb-6">Applied Jobs</h3>
+            <h3 className="text-xl font-bold mb-6">Recent Jobs Applied</h3>
             <div className="space-y-4">
-              {appliedJobs.length === 0 && <p className="text-gray-400">No jobs applied yet.</p>}
-              {appliedJobs.slice(0, 3).map((job, idx) => <div key={idx} className="p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all cursor-pointer">
+              {recentAppliedJobs.length === 0 && <p className="text-gray-400">No jobs applied yet.</p>}
+              {recentAppliedJobs.slice(0, 3).map((job, idx) => (
+                <div key={idx} className="p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-semibold">{job.jobTitle || 'Unknown'}</p>
+                      <p className="font-semibold">{job.companyName}</p>
+                      <p className="text-sm text-gray-400">{job.jobTitle}</p>
                     </div>
-                    <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-white/10 border border-white/20 text-gray-400">
-                      {job.status}
-                    </span>
+                    <div className="text-right">
+                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
+                        (job.status || '').toLowerCase() === 'accepted' ? 'bg-[#10b981]/10 border-[#10b981]/20 text-[#10b981]' :
+                        (job.status || '').toLowerCase() === 'rejected' ? 'bg-[#ef4444]/10 border-[#ef4444]/20 text-[#ef4444]' :
+                        'bg-[#f59e0b]/10 border-[#f59e0b]/20 text-[#f59e0b]'
+                      }`}>
+                        {job.status || 'applied'}
+                      </span>
+                    </div>
                   </div>
-                </div>)}
+                  <p className="text-xs text-gray-500">{job.timeAgo || job.appliedAt}</p>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -236,25 +230,43 @@ export function CandidateDashboard() {
             </ResponsiveContainer>
           </div>
 
-          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl">
-            <h3 className="text-xl font-bold mb-6">Recent Interviews</h3>
-            <div className="space-y-4">
-              {recentInterviews.map((interview, idx) => <div key={idx} className="p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-semibold">{interview.company}</p>
-                      <p className="text-sm text-gray-400">{interview.role}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-[#1f7af9]">{interview.score}</p>
-                      <p className="text-xs text-gray-500">score</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500">{interview.date}</p>
-                </div>)}
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#1f7af9]/50 hover:shadow-lg hover:shadow-[#1f7af9]/20 transition-all flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-bold mb-1">ATS Resume Score</h3>
+                <p className="text-sm text-gray-400">Based on your latest upload</p>
+              </div>
+              <div className="w-24 h-24">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadialBarChart data={atsData} startAngle={90} endAngle={-270} innerRadius="70%" outerRadius="100%">
+                    <RadialBar dataKey="value" cornerRadius={10} />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <p className="text-5xl font-bold mb-2">{atsData[0].value}<span className="text-2xl text-gray-400">/100</span></p>
+            <div className="flex items-center gap-2 text-sm text-[#10b981]">
+              <TrendingUp className="w-4 h-4" />
+              <span>Ready for applications</span>
+            </div>
+            <div className="flex flex-col gap-3 mt-6">
+              <button onClick={() => setShowAnalysisModal(true)} className="w-full py-2 bg-[#1f7af9]/20 text-[#1f7af9] hover:bg-[#1f7af9]/30 rounded-lg font-semibold transition-colors">
+                View Analysis Details
+              </button>
+              <button onClick={() => navigate('/candidate/ats-analyzer')} className="w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg font-semibold transition-colors">
+                Analyze New Resume
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Analysis Details Modal */}
+      {showAnalysisModal && (
+        <ATSResultDetails 
+          parsedData={parsedData} 
+          onClose={() => setShowAnalysisModal(false)} 
+        />
+      )}
     </div>;
 }

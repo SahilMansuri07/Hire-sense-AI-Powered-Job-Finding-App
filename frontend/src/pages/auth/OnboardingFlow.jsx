@@ -14,7 +14,8 @@ export function OnboardingFlow() {
     jobRoleId: '',
     jobRoleName: '',
     experience: '',
-    skills: []
+    skills: [],
+    jobDescription: ''
   });
   const dispatch = useDispatch();
   const [skillOptions, setSkillOptions] = useState([]);
@@ -105,34 +106,37 @@ export function OnboardingFlow() {
     }));
   };
 
-  const handleResumeUpload = async (e) => {
+  const handleResumeUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      await uploadResumeAPI(fd);
-      toast.success("Resume uploaded successfully!");
-      setStep(2);
-    } catch (err) {
-      toast.error(err?.message || "Failed to upload resume");
-    } finally {
-      setIsUploading(false);
-    }
+    setFormData(prev => ({ ...prev, resume: file }));
+    toast.success("Resume attached!");
+    setStep(2);
   };
 
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
+      if (formData.resume) {
+        const fd = new FormData();
+        fd.append('file', formData.resume);
+        if (formData.jobRoleName) {
+          fd.append('job_description', formData.jobRoleName);
+        }
+        const res = await uploadResumeAPI(fd);
+        if (res?.data) {
+          localStorage.setItem('resumeAnalysis', JSON.stringify(res.data));
+        }
+      }
+      
       const payload = {
         jobRoleId: formData.jobRoleId,
         experienceLevel: formData.experience,
         skills_id: formData.skills
       };
-      const res = await setupPreferencesAPI(payload);
+      await setupPreferencesAPI(payload);
       dispatch(updateUser({ jobRole: formData.jobRoleName, experience: formData.experience, skills: formData.skills }));
-      toast.success("Preferences saved!");
+      toast.success("Setup complete!");
       navigate('/candidate/dashboard');
     } catch (err) {
       toast.error(err?.message || "Failed to save preferences");
@@ -182,7 +186,7 @@ export function OnboardingFlow() {
 
               <label className="block border-2 border-dashed border-white/20 rounded-2xl p-12 text-center hover:border-[#1f7af9]/50 transition-all cursor-pointer group">
                 <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400 group-hover:text-[#1f7af9] transition-colors" />
-                <p className="text-lg mb-2">{isUploading ? "Uploading..." : "Click to upload or drag and drop"}</p>
+                <p className="text-lg mb-2">{formData.resume ? formData.resume.name : "Click to upload or drag and drop"}</p>
                 <p className="text-sm text-gray-500">PDF, DOC, DOCX (Max 5MB)</p>
                 <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} disabled={isUploading} />
               </label>

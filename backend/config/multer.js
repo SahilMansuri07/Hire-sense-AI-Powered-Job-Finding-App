@@ -38,7 +38,7 @@ const profileupload = multer({
 const resumeupload = multer({
   storage: multer.memoryStorage(),
   fileFilter: pdfFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 export { profileupload, resumeupload, storage, pdfFileFilter };

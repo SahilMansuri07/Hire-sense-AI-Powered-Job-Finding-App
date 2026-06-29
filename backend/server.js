@@ -26,7 +26,7 @@ app.use(cors({
 
 app.use("/uploads", express.static("uploads"));
 
-// app.use(middleware.tokenMiddleware);
+app.use(middleware.tokenMiddleware);
 // app.use(middleware.allowedRoles("user", "recruiter", "admin"));
 
 // app.use(middleware.checkApi);

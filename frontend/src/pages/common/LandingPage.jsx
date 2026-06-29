@@ -1,8 +1,11 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Sparkles, Target, TrendingUp, Users, ArrowRight, CheckCircle } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, Users, ArrowRight, CheckCircle, User } from 'lucide-react';
+import { useSelector } from 'react-redux';
+
 export function LandingPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, role, user } = useSelector((state) => state.auth);
   const stats = [{
     value: '98%',
     label: 'Match Accuracy',
@@ -44,12 +47,25 @@ export function LandingPage() {
             <span className="text-xl font-bold">HireSense AI</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/login')} className="px-4 py-2 text-sm hover:text-[#1f7af9] transition-colors">
-              Log In
-            </button>
-            <button onClick={() => navigate('/register')} className="px-6 py-2 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg hover:shadow-lg hover:shadow-[#1f7af9]/30 transition-all">
-              Sign Up
-            </button>
+            {isAuthenticated ? (
+              <>
+                <button onClick={() => navigate(role === 'recruiter' ? '/recruiter/dashboard' : '/candidate/dashboard')} className="px-4 py-2 text-sm hover:text-[#1f7af9] transition-colors font-medium">
+                  {role === 'recruiter' ? 'Recruiter Dashboard' : 'Candidate Dashboard'}
+                </button>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1f7af9] to-[#bc13fe] flex items-center justify-center shadow-lg border border-white/20 cursor-pointer">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+              </>
+            ) : (
+              <>
+                <button onClick={() => navigate('/login')} className="px-4 py-2 text-sm hover:text-[#1f7af9] transition-colors">
+                  Log In
+                </button>
+                <button onClick={() => navigate('/register')} className="px-6 py-2 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg hover:shadow-lg hover:shadow-[#1f7af9]/30 transition-all">
+                  Sign Up
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -79,13 +95,22 @@ export function LandingPage() {
               Transform your hiring process with AI-driven insights. Score resumes, conduct mock interviews, and find the perfect match.
             </p>
             <div className="flex items-center justify-center gap-4">
-              <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg font-semibold hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all flex items-center gap-2 group">
-                Get Started Free
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-white/5 backdrop-blur border border-white/10 rounded-lg font-semibold hover:bg-white/10 transition-all">
-                Watch Demo
-              </button>
+              {isAuthenticated ? (
+                <button onClick={() => navigate(role === 'recruiter' ? '/recruiter/dashboard' : '/candidate/dashboard')} className="px-8 py-4 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg font-semibold hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all flex items-center gap-2 group">
+                  Go to Dashboard
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg font-semibold hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all flex items-center gap-2 group">
+                    Get Started Free
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-white/5 backdrop-blur border border-white/10 rounded-lg font-semibold hover:bg-white/10 transition-all">
+                    Watch Demo
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
 
@@ -144,12 +169,21 @@ export function LandingPage() {
             <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Career?</h2>
             <p className="text-gray-400 mb-8">Join thousands of professionals using HireSense AI</p>
             <div className="flex items-center justify-center gap-4">
-              <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg font-semibold hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all">
-                I'm a Candidate
-              </button>
-              <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-white/10 backdrop-blur border border-white/20 rounded-lg font-semibold hover:bg-white/20 transition-all">
-                I'm a Recruiter
-              </button>
+              {isAuthenticated ? (
+                <button onClick={() => navigate(role === 'recruiter' ? '/recruiter/dashboard' : '/candidate/dashboard')} className="px-8 py-4 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg font-semibold hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all flex items-center gap-2 group">
+                  Continue to Dashboard
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-lg font-semibold hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all">
+                    I'm a Candidate
+                  </button>
+                  <button onClick={() => navigate('/role-selection')} className="px-8 py-4 bg-white/10 backdrop-blur border border-white/20 rounded-lg font-semibold hover:bg-white/20 transition-all">
+                    I'm a Recruiter
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

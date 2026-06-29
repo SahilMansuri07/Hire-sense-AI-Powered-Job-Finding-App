@@ -1,8 +1,17 @@
 import { useNavigate } from 'react-router';
-import { Users, Clock, Award, Plus, Search, Bell, Settings, User, TrendingUp, MapPin } from 'lucide-react';
+import { Users, Clock, Award, Plus, Search, Bell, Settings, User, TrendingUp, MapPin, LogOut } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../../redux/slices/authSlice';
 export function RecruiterDashboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/');
+  };
   const pipelineData = [{
     stage: 'Applied',
     count: 342
@@ -74,8 +83,14 @@ export function RecruiterDashboard() {
               <Settings className="w-5 h-5" />
             </button>
             <button className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-              <User className="w-5 h-5" />
-              <span className="hidden md:block">Profile</span>
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1f7af9] to-[#bc13fe] flex items-center justify-center text-xs font-bold text-white">
+                {user?.name?.charAt(0) || user?.first_name?.charAt(0) || <User className="w-4 h-4" />}
+              </div>
+              <span className="hidden md:block font-medium">{user?.name || user?.first_name || 'Profile'}</span>
+            </button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 rounded-lg transition-colors">
+              <LogOut className="w-5 h-5" />
+              <span className="hidden md:block">Log Out</span>
             </button>
           </div>
         </div>
@@ -86,7 +101,7 @@ export function RecruiterDashboard() {
         {/* Welcome & Quick Actions */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Recruitment Overview</h2>
+            <h2 className="text-3xl font-bold mb-2">Welcome back, {user?.name || user?.first_name || 'Recruiter'}!</h2>
             <p className="text-gray-400">Manage your hiring pipeline and track performance</p>
           </div>
           <button onClick={() => navigate('/recruiter/post-job')} className="px-6 py-3 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-xl hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all flex items-center gap-2">

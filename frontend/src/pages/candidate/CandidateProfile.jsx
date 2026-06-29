@@ -1,7 +1,10 @@
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Mail, MapPin, Briefcase, Calendar, Award, FileText, Video } from 'lucide-react';
+import { useSelector } from 'react-redux';
+
 export function CandidateProfile() {
   const navigate = useNavigate();
+  const { user } = useSelector(state => state.auth);
   const skills = ['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'GraphQL', 'Docker', 'Git'];
   const interviews = [{
     company: 'TechCorp',
@@ -46,28 +49,28 @@ export function CandidateProfile() {
         {/* Profile Header */}
         <div className="p-8 bg-white/5 backdrop-blur border border-white/10 rounded-3xl mb-6">
           <div className="flex items-start gap-6">
-            <div className="w-32 h-32 bg-gradient-to-br from-[#1f7af9] to-[#bc13fe] rounded-2xl flex items-center justify-center text-5xl flex-shrink-0">
-              👤
+            <div className="w-32 h-32 bg-gradient-to-br from-[#1f7af9] to-[#bc13fe] rounded-2xl flex items-center justify-center text-6xl flex-shrink-0 font-bold text-white">
+              {user?.name?.charAt(0) || user?.first_name?.charAt(0) || '👤'}
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-2">Alex Johnson</h1>
-              <p className="text-xl text-gray-400 mb-4">Senior Frontend Developer</p>
+              <h1 className="text-3xl font-bold mb-2">{user?.name || user?.first_name || 'Candidate Name'}</h1>
+              <p className="text-xl text-gray-400 mb-4">{user?.jobRole || 'Professional Candidate'}</p>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="flex items-center gap-2 text-gray-400">
                   <Mail className="w-4 h-4" />
-                  alex.johnson@email.com
+                  {user?.email || 'candidate@email.com'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <MapPin className="w-4 h-4" />
-                  San Francisco, CA
+                  {user?.location || 'Open to Relocation'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <Briefcase className="w-4 h-4" />
-                  8 years experience
+                  {user?.experience || 'Ready for opportunities'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <Calendar className="w-4 h-4" />
-                  Joined Jan 2026
+                  Active Member
                 </div>
               </div>
               <button className="px-6 py-3 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-xl hover:shadow-lg hover:shadow-[#1f7af9]/30 transition-all">

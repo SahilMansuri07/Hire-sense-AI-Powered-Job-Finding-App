@@ -1,22 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hire Sense AI</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="description" content="AI-powered recruitment platform streamlining job search and hiring with resume analysis, interview coaching, and data-driven candidate matching for recruiters and candidates." />
+    <meta name="robots" content="noindex, nofollow" />
+    <style>
+      html, body { height: 100%; margin: 0; background-color: #020817; } /* Modern dark background */
+      #root { height: 100%; }
 
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Design HireSense AI Prototype</title>
-      <meta name="description" content="AI-powered recruitment platform streamlining job search and hiring with resume analysis, interview coaching, and data-driven candidate matching for recruiters and candidates." />
-      <meta name="robots" content="noindex, nofollow" />
-      <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
-      
-    </head>
+      .loader-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        background: linear-gradient(135deg, #020817 0%, #0f172a 100%);
+      }
 
-    <body>
-      
-      <div id="root"></div>
-      <script type="module" src="/src/main.jsx"></script>
-      
-    </body>
-  </html>
-  
+      .loader-logo {
+        width: 140px;
+        height: 140px;
+        border-radius: 30px;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 10px 20px -5px rgba(0, 0, 0, 0.4);
+        margin-bottom: 40px;
+        animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite, float 4s ease-in-out infinite;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        border-top-color: #3b82f6; /* Blue primary color */
+        border-right-color: #8b5cf6; /* Violet accent color */
+        animation: spin 1.2s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.85; }
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="loader-container">
+        <img src="/logo.png" alt="Hire Sense AI Logo" class="loader-logo" />
+        <div class="spinner"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

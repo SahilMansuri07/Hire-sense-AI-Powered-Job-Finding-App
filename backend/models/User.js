@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     },
     mobile_number: {
       type: String,
-      required : false,
+      required : true,
     },
     social_id : {
       type: String,

@@ -385,11 +385,8 @@ const userModule = {
                 );
             }
 
-            // 1. User profile
-            const user = await User.findById(userId)
-                .populate("skills", "name")
-                .populate("jobRoles.jobRoleId", "name")
-                .lean();
+            // 1. User profile (only need name)
+            const user = await User.findById(userId).select("name").lean();
 
             if (!user) {
                 return middleware.sendApiResponse(
@@ -398,42 +395,7 @@ const userModule = {
                 );
             }
 
-            const userProfile = {
-                name:         user.name || "User",
-                email:        user.email,
-                profileImage: user.profile_image || null,
-                skills:       (user.skills || []).map((s) => s?.name).filter(Boolean),
-                jobRoles:     (user.jobRoles || []).map((jr) => ({
-                    role:            jr.jobRoleId?.name || null,
-                    experienceLevel: jr.experienceLevel || null,
-                })),
-            };
-
-            // 2. Resume score — fetch latest resume parsedData from DB
-            const latestResume = await Resume.findOne({ userId })
-                .sort({ uploadedAt: -1 })
-                .lean();
-
-            let stats = null;
-            let resumeInsights = null;
-
-            if (latestResume && latestResume.parsedData) {
-                const pd = latestResume.parsedData;
-
-                stats = {
-                    atsScore:        pd["JD Match"] || pd["jd_match"] || pd["ats_score"] || 0,
-                    skillAlignment:  pd["Skills Analysis"]?.["Skill Match Score"] || pd["skills_analysis"]?.["skill_match_score"] || 0,
-                    experienceMatch: pd["Experience Analysis"]?.["Experience Match Score"] || pd["experience_analysis"]?.["experience_match_score"] || 0,
-                };
-
-                resumeInsights = {
-                    resumeId:   latestResume._id,
-                    fileName:   latestResume.fileName,
-                    uploadedAt: latestResume.uploadedAt,
-                };
-            }
-
-            // 3. Applied jobs
+            // 2. Applied jobs
             const applications = await JobApplicant.find({ userId, is_delete: false })
                 .sort({ created_at: -1 })
                 .populate({
@@ -442,7 +404,7 @@ const userModule = {
                 })
                 .lean();
 
-            const appliedJobs = applications.map((app) => ({
+            const recentAppliedJobs = applications.map((app) => ({
                 applicationId:  app._id,
                 jobId:          app.jobId?._id || null,
                 companyName:    app.jobId?.department || "N/A",
@@ -454,22 +416,20 @@ const userModule = {
                 timeAgo:        _getTimeAgo(app.created_at),
             }));
 
-            // 4. Application status counts
-            const summary = {
-                totalApplications: applications.length,
-                appliedCount:  applications.filter((a) => a.status === "applied").length,
-                acceptedCount: applications.filter((a) => a.status === "Accepted").length,
-                rejectedCount: applications.filter((a) => a.status === "rejected").length,
-                totalResumes:  await Resume.countDocuments({ userId }),
-            };
+            // 3. Application status counts
+            const totalAppliedJobs = applications.length;
+            const pending = applications.filter((a) => ["applied", "pending"].includes((a.status || "").toLowerCase())).length;
+            const accepted = applications.filter((a) => (a.status || "").toLowerCase() === "accepted").length;
+            const rejected = applications.filter((a) => (a.status || "").toLowerCase() === "rejected").length;
 
-            // 5. Build response
+            // 4. Build response
             const dashboardData = {
-                userProfile,
-                stats,
-                resumeInsights,
-                appliedJobs,
-                summary,
+                UserName: user.name || "User",
+                totalAppliedJobs,
+                pending,
+                accepted,
+                rejected,
+                recentAppliedJobs,
             };
 
             return middleware.sendApiResponse(
