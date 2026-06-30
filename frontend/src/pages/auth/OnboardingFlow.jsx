@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useDispatch } from 'react-redux';
 import { Upload, Briefcase, Code, CheckCircle, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
-import { getSkillsAPI, setupPreferencesAPI, uploadResumeAPI, getJobRolesAPI } from '../../api/api';
+import { setupPreferencesAPI, uploadResumeAPI, getJobRolesAPI, getJobRoleSkillsAPI } from '../../api/api';
 import { updateUser } from '../../redux/slices/authSlice';
 import toast from 'react-hot-toast';
 
@@ -74,14 +74,23 @@ export function OnboardingFlow() {
     return () => clearTimeout(delayDebounceFn);
   }, [jobRoleSearch, showJobRoleDropdown]);
 
-  const handleJobRoleSelect = (role) => {
+  const handleJobRoleSelect = async (role) => {
     setFormData(prev => ({
       ...prev,
       jobRoleId: role._id,
-      jobRoleName: role.name
+      jobRoleName: role.name,
+      skills: [] // Reset skills on role change
     }));
     setJobRoleSearch(role.name);
     setShowJobRoleDropdown(false);
+
+    try {
+      const res = await getJobRoleSkillsAPI(role._id);
+      setSkillOptions(res?.data || []);
+    } catch (err) {
+      console.error(err);
+      setSkillOptions([]);
+    }
   };
 
   const highlightMatch = (text, search) => {
@@ -93,12 +102,7 @@ export function OnboardingFlow() {
     );
   };
 
-  useEffect(() => {
-    getSkillsAPI().then(res => {
-      if (res?.data) setSkillOptions(res.data);
-    }).catch(err => console.error(err));
-  }, []);
-
+  // Removed global getSkillsAPI call
   const handleSkillToggle = skillId => {
     setFormData(prev => ({
       ...prev,
@@ -132,7 +136,7 @@ export function OnboardingFlow() {
       const payload = {
         jobRoleId: formData.jobRoleId,
         experienceLevel: formData.experience,
-        skills_id: formData.skills
+        Skills: formData.skills
       };
       await setupPreferencesAPI(payload);
       dispatch(updateUser({ jobRole: formData.jobRoleName, experience: formData.experience, skills: formData.skills }));
@@ -150,7 +154,7 @@ export function OnboardingFlow() {
     icon: Upload
   }, {
     number: 2,
-    title: 'Job Preferences',
+    title: 'Job Role',
     icon: Briefcase
   }, {
     number: 3,
@@ -158,6 +162,10 @@ export function OnboardingFlow() {
     icon: Code
   }, {
     number: 4,
+    title: 'Experience',
+    icon: CheckCircle
+  }, {
+    number: 5,
     title: 'Confirm',
     icon: CheckCircle
   }];
@@ -196,8 +204,8 @@ export function OnboardingFlow() {
             </div>}
 
           {step === 2 && <div>
-              <h2 className="text-3xl font-bold mb-2">Job Preferences</h2>
-              <p className="text-gray-400 mb-8">Tell us what you're looking for</p>
+              <h2 className="text-3xl font-bold mb-2">Job Role</h2>
+              <p className="text-gray-400 mb-8">Tell us what role you're applying for</p>
 
               <div className="space-y-6">
                 <div ref={dropdownRef} className="relative">
@@ -212,7 +220,7 @@ export function OnboardingFlow() {
                     }} className={`w-full px-4 py-3 bg-white/5 border rounded-xl focus:outline-none focus:border-[#1f7af9] focus:ring-2 focus:ring-[#1f7af9]/20 ${!formData.jobRoleId && jobRoleSearch ? 'border-red-500' : 'border-white/10'}`} placeholder="e.g., Senior Frontend Developer" />
                     {isSearchingJobRoles && (
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                         <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                       </div>
                     )}
                   </div>
@@ -239,20 +247,6 @@ export function OnboardingFlow() {
                     </div>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-sm mb-2">Experience Level</label>
-                  <select value={formData.experience} onChange={e => setFormData({
-                ...formData,
-                experience: e.target.value
-              })} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[#1f7af9] focus:ring-2 focus:ring-[#1f7af9]/20">
-                    <option value="">Select experience level</option>
-                    <option value="Fresher">Fresher</option>
-                    <option value="Junior">Junior</option>
-                    <option value="Mid">Mid</option>
-                    <option value="Senior">Senior</option>
-                  </select>
-                </div>
               </div>
             </div>}
 
@@ -260,14 +254,38 @@ export function OnboardingFlow() {
               <h2 className="text-3xl font-bold mb-2">Your Skills</h2>
               <p className="text-gray-400 mb-8">Select all skills that apply to you</p>
 
-              <div className="grid grid-cols-3 gap-3">
-                {skillOptions.map(skill => <button key={skill._id} onClick={() => handleSkillToggle(skill._id)} className={`px-4 py-3 rounded-xl border transition-all ${formData.skills.includes(skill._id) ? 'bg-[#1f7af9]/20 border-[#1f7af9] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/30'}`}>
-                    {skill.name}
-                  </button>)}
-              </div>
+              {skillOptions.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {skillOptions.map(skill => <button key={skill} onClick={() => handleSkillToggle(skill)} className={`px-4 py-3 rounded-xl border transition-all ${formData.skills.includes(skill) ? 'bg-[#1f7af9]/20 border-[#1f7af9] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/30'}`}>
+                      {skill}
+                    </button>)}
+                </div>
+              ) : (
+                <div className="text-center p-8 bg-white/5 border border-white/10 rounded-2xl">
+                  <p className="text-gray-400">No specific skills found for this role yet. We will configure default recommendations.</p>
+                </div>
+              )}
             </div>}
 
           {step === 4 && <div>
+              <h2 className="text-3xl font-bold mb-2">Experience Level</h2>
+              <p className="text-gray-400 mb-8">Select your professional experience level</p>
+
+              <div>
+                <select value={formData.experience} onChange={e => setFormData({
+                  ...formData,
+                  experience: e.target.value
+                })} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[#1f7af9] focus:ring-2 focus:ring-[#1f7af9]/20">
+                  <option value="">Select experience level</option>
+                  <option value="Fresher">Fresher</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Mid">Mid</option>
+                  <option value="Senior">Senior</option>
+                </select>
+              </div>
+            </div>}
+
+          {step === 5 && <div>
               <h2 className="text-3xl font-bold mb-2">All Set!</h2>
               <p className="text-gray-400 mb-8">Review your profile before we get started</p>
 
@@ -283,12 +301,11 @@ export function OnboardingFlow() {
                 <div className="p-4 bg-white/5 rounded-xl">
                   <span className="text-sm text-gray-400">Skills</span>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.skills.map(skillId => {
-                      const skillObj = skillOptions.find(s => s._id === skillId);
-                      return <span key={skillId} className="px-3 py-1 bg-[#1f7af9]/20 border border-[#1f7af9] rounded-lg text-sm">
-                        {skillObj?.name || skillId}
-                      </span>;
-                    })}
+                    {formData.skills.map(skill => (
+                      <span key={skill} className="px-3 py-1 bg-[#1f7af9]/20 border border-[#1f7af9] rounded-lg text-sm">
+                        {skill}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -302,11 +319,11 @@ export function OnboardingFlow() {
               </button>}
             <div className="flex-1" />
             <button 
-              onClick={() => step === 4 ? handleComplete() : setStep(step + 1)} 
-              disabled={isSubmitting || (step === 2 && (!formData.jobRoleId || !formData.experience))} 
+              onClick={() => step === 5 ? handleComplete() : setStep(step + 1)} 
+              disabled={isSubmitting || (step === 2 && !formData.jobRoleId) || (step === 3 && formData.skills.length === 0 && skillOptions.length > 0) || (step === 4 && !formData.experience)} 
               className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-xl hover:shadow-2xl hover:shadow-[#1f7af9]/40 transition-all disabled:opacity-50"
             >
-              {step === 4 ? (isSubmitting ? 'Saving...' : 'Complete Setup') : 'Continue'}
+              {step === 5 ? (isSubmitting ? 'Saving...' : 'Complete Setup') : 'Continue'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

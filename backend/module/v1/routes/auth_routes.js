@@ -16,6 +16,7 @@ router.post("/upload-resume" , authController.uploadResume);
 
 router.get("/skills" , authController.skillsListing);
 router.get("/job-roles" , authController.jobRolesListing);
+router.get("/job-roles/:id/skills" , authController.jobRoleSkills);
 
 router.post("/set-up-preferences" , authController.setUpPreferences);
 

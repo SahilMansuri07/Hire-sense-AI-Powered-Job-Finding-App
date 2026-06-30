@@ -34,6 +34,10 @@ const authController = {
         return authModule.jobRolesListing(req, res);
     },
 
+    async jobRoleSkills(req, res){
+        return authModule.jobRoleSkills(req, res);
+    },
+
     async selectSkills(req, res){
         return authModule.selectSkills(req, res);
     },

@@ -65,26 +65,22 @@ const userSchema = new mongoose.Schema(
       // s = Standard (email/password), g = Google (social login)
     },
     // replaces UserSkill junction table
-    skills: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Skill",
-      },
-    ],
+    skills: {
+      type: [String],
+      default: [],
+    },
 
     // replaces UserJobRole + ExperienceLevel junction tables
-    jobRoles: [
-      {
-        jobRoleId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "JobRole",
-        },
-        experienceLevel: {
-          type: String,
-          enum: ["Fresher", "Junior", "Mid", "Senior"],
-        },
+    jobRole: {
+      jobRoleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "JobRole",
       },
-    ],
+      experienceLevel: {
+        type: String,
+        enum: ["Fresher", "Junior", "Mid", "Senior"],
+      },
+    },
 
     is_active: {
       type: Boolean,

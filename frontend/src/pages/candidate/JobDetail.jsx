@@ -12,12 +12,20 @@ export function JobDetail() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-
+   console.log("id:",id);
   useEffect(() => {
-    fetchSingleJobAPI(id)
-      .then(res => setJob(res?.data))
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
+    async function getJobData(){
+      try {
+        const response = await fetchSingleJobAPI(id); 
+        console.log("response:",response);
+        setJob(response?.data);
+      } catch (error) {
+        console.log("error:",error);
+      } finally {
+        setLoading(false);
+      }
+    } 
+    getJobData(); 
   }, [id]);
 
   if (loading) return <div className="min-h-screen bg-[#0f1723] text-white flex justify-center items-center">Loading...</div>;
@@ -45,7 +53,11 @@ export function JobDetail() {
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <DollarSign className="w-4 h-4" />
-                  {typeof job.salaryRange === 'string' ? job.salaryRange : 'Competitive'}
+                  {typeof job.salaryRange === 'string' ? job.salaryRange : 
+                    (job.salaryRange?.min && job.salaryRange?.max ? 
+                      `$${job.salaryRange.min.toLocaleString()} - $${job.salaryRange.max.toLocaleString()}` : 
+                      'Competitive'
+                    )}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <Briefcase className="w-4 h-4" />
@@ -66,17 +78,17 @@ export function JobDetail() {
           <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl">
             <h2 className="text-2xl font-bold mb-4">Job Description</h2>
             <div className="space-y-3 text-gray-400 whitespace-pre-line">
-              <p>{job.description}</p>
-              {job.requirements && (
+              <p>{job.jobDescription?.description || job.description}</p>
+              {(job.jobDescription?.requirements || job.requirements) && (
                 <>
                   <p className="font-semibold text-white mt-6 mb-2">Requirements:</p>
-                  <p>{job.requirements}</p>
+                  <p>{job.jobDescription?.requirements || job.requirements}</p>
                 </>
               )}
-              {job.benefits && (
+              {(job.jobDescription?.benefits || job.benefits) && (
                 <>
                   <p className="font-semibold text-white mt-6 mb-2">Benefits:</p>
-                  <p>{job.benefits}</p>
+                  <p>{job.jobDescription?.benefits || job.benefits}</p>
                 </>
               )}
             </div>

@@ -8,6 +8,10 @@ const jobRoleSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    skills: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: {

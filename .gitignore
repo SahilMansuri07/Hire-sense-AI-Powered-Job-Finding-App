@@ -13,6 +13,8 @@ dist-ssr
 dist
 *.local
 
+backend/uploads/*
+
 # Node modules
 node_modules/
 /frontend/node_modules/

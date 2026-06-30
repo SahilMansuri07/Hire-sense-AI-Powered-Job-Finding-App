@@ -9,26 +9,31 @@ import { extractPdfTextFromPython, extractKeywordsFromPython } from "../../../py
 // Builds a MongoDB filter object from request body params.
 // Only includes fields that are actually passed in.
 const buildFilter = (body = {}) => {
-    const filter = { is_active: true };
+    // If you imported via Compass, is_active might be undefined, but we'll assume true or missing.
+    // To be safe against Compass imports, we can check { $ne: false } instead of true.
+    const filter = { is_active: { $ne: false }, is_delete: { $ne: true } };
 
     if (body.location) {
         filter.location = { $regex: body.location, $options: "i" };
     }
 
     if (body.job_type) {
-        filter.job_type = body.job_type;
+        filter.employmentType = body.job_type;
     }
 
+    // JobPost doesn't have an experienceLevel field, it's usually inferred from jobTitle
     if (body.experience_level) {
-        filter.experienceLevel = body.experience_level;
+        filter.jobTitle = { $regex: body.experience_level, $options: "i" };
     }
 
     if (body.min_salary) {
-        filter.salaryMin = { $gte: Number(body.min_salary) };
+        filter["salaryRange.min"] = { $gte: Number(body.min_salary) };
     }
 
     if (body.is_remote !== undefined) {
-        filter.is_remote = body.is_remote;
+        if (body.is_remote) {
+            filter.job_type = "remote";
+        }
     }
 
     if (body.skills && Array.isArray(body.skills) && body.skills.length > 0) {
@@ -38,6 +43,7 @@ const buildFilter = (body = {}) => {
     if (body.search) {
         filter.$or = [
             { jobTitle: { $regex: body.search, $options: "i" } },
+            { department: { $regex: body.search, $options: "i" } }
         ];
     }
 
@@ -50,6 +56,7 @@ const userModule = {
     fetchJobs: async (req, res) => {
         try {
             const userId = req.loginUser.id;
+            
             if (!userId) {
                 return middleware.sendApiResponse(
                     res,
@@ -59,16 +66,30 @@ const userModule = {
                     null
                 );
             }
-       
+            console.log("req.body: ", userId );
+            const page = parseInt(req.body.page) || 1;
+            const limit = parseInt(req.body.limit) || 10;
+            const skip = (page - 1) * limit;
             const filter = buildFilter(req.body); // uses all filters if passed, otherwise just { is_active: true }
-            const jobs = await JobPost.find(filter).lean();
+            console.log("filter: ", filter);
+            const jobs = await JobPost.find(filter).skip(skip).limit(limit).lean();
+            const total = await JobPost.countDocuments(filter);
+            const totalPages = Math.ceil(total / limit);
 
             return middleware.sendApiResponse(
                 res,
                 Codes.SUCCESS,
                 Codes.RESPONSE_SUCCESS,
                 "Jobs fetched successfully",
-                jobs
+                {
+                    jobs,
+                    pagination: {
+                        total,
+                        totalPages,
+                        currentPage: page,
+                        limit
+                    }
+                }
             );
         } catch (error) {
             console.log("Error in fetchJobs: ", error);
@@ -85,6 +106,7 @@ const userModule = {
     fetchJobById: async (req, res) => {
         try {
             const jobId = req.params.id;
+            // console.log("jobId: ", jobId);
             if (!jobId) {
                 return middleware.sendApiResponse(
                     res,
@@ -95,7 +117,11 @@ const userModule = {
                 );
             }
 
-            const job = await JobPost.findOne({ _id: jobId, is_active: true }).lean();
+            const job = await JobPost.findOne({ 
+                _id: jobId, 
+                is_active: { $ne: false }, 
+                is_delete: { $ne: true } 
+            }).lean();
             if (!job) {
                 return middleware.sendApiResponse(
                     res,
@@ -127,11 +153,13 @@ const userModule = {
 
     applyForJob: async (req, res) => {
         try {
+            console.log("req.body: ", req.body);
             const userId = req.loginUser.id; 
             const file = req.file || req.files?.resume?.[0] || req.files?.file?.[0] || null;
             const portfolioLink = req.body.portfolio_link || null;
-            const jobId = req.params.id;
-      
+            const { fullName, email, phone, coverLetter, linkedIn } = req.body;
+            const jobId = req.params.id || req.body.jobId;
+            console.log("jobId: ", jobId);
             if (!file) {
                 return middleware.sendApiResponse(
                     res,
@@ -143,7 +171,11 @@ const userModule = {
             }
 
             const fileUrl = `/uploads/${file?.filename || ""}`;
-            const job = await JobPost.findOne({ _id: jobId, is_active: true, is_delete: false }).lean();
+            const job = await JobPost.findOne({ 
+                _id: jobId, 
+                is_active: { $ne: false }, 
+                is_delete: { $ne: true } 
+            }).lean();
 
             if (!job) {
                 return middleware.sendApiResponse(
@@ -187,6 +219,11 @@ const userModule = {
                 resumePath: fileUrl,
                 keywordsValues,
                 portfolioLink,
+                fullName,
+                email,
+                phone,
+                coverLetter,
+                linkedIn,
             });
 
             return middleware.sendApiResponse(

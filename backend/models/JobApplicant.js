@@ -29,6 +29,26 @@ const jobApplicantSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+    fullName: {
+      type: String,
+      default: null,
+    },
+    email: {
+      type: String,
+      default: null,
+    },
+    phone: {
+      type: String,
+      default: null,
+    },
+    coverLetter: {
+      type: String,
+      default: null,
+    },
+    linkedIn: {
+      type: String,
+      default: null,
+    },
     status: {
       type: String,
       enum: ["applied", "rejected", "Accepted"],

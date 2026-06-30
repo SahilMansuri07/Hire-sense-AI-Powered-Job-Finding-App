@@ -65,7 +65,7 @@ const authValidation = {
     setUpPreferencesSchema: Joi.object({
         jobRoleId: Joi.string().required(),
         experienceLevel: Joi.string().valid("Fresher", "Junior", "Mid", "Senior").required(),
-        skills_id: Joi.array().items(Joi.string()).min(1).required(),
+        Skills: Joi.array().items(Joi.string()).min(1).required(),
     }),
 
 };

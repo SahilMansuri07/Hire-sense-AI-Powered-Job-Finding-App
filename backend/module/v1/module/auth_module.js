@@ -437,69 +437,49 @@ const authModule = {
                 return null;
             }
 
-            // Check if jobRole already exists in user's embedded jobRoles array
-            const user = await User.findById(userId).lean();
-            const existingIndex = user.jobRoles
-                ? user.jobRoles.findIndex(jr => jr.jobRoleId.toString() === jobRoleId)
-                : -1;
-
-            let updatedUser;
-
-            if (existingIndex >= 0) {
-                // Update existing entry's experienceLevel
-                updatedUser = await User.findOneAndUpdate(
-                    { _id: userId, "jobRoles.jobRoleId": jobRoleId },
-                    { $set: { "jobRoles.$.experienceLevel": experienceLevel } },
-                    { new: true }
-                ).populate("jobRoles.jobRoleId", "name").lean();
-            } else {
-                // Push new entry
-                updatedUser = await User.findByIdAndUpdate(
-                    userId,
-                    { $push: { jobRoles: { jobRoleId, experienceLevel } } },
-                    { new: true }
-                ).populate("jobRoles.jobRoleId", "name").lean();
-            }
-
-            const lastJobRole = updatedUser.jobRoles[updatedUser.jobRoles.length - 1];
+            const updatedUser = await User.findByIdAndUpdate(
+                userId,
+                { $set: { jobRole: { jobRoleId, experienceLevel } } },
+                { new: true }
+            ).populate("jobRole.jobRoleId", "name").lean();
 
             const responseData = {
                 userId,
-                jobRole: lastJobRole?.jobRoleId?.name || null,
-                experience: lastJobRole?.experienceLevel || null,
+                jobRole: updatedUser?.jobRole?.jobRoleId?.name || null,
+                experience: updatedUser?.jobRole?.experienceLevel || null,
             };
 
-            return responseData || [];
+            return responseData || null;
         } catch (error) {
             console.log("Error in setPreferences: ", error);
             return null;
         }
     },
 
-    skillsListing : async (req, res) => {
-        try {
-            const skills = await Skill.find({
-                is_delete: false,
-                is_active: true,
-            });
-            return middleware.sendApiResponse( 
-                res,
-                Codes.SUCCESS,
-                Codes.RESPONSE_SUCCESS,
-                "Skills_listed",
-                skills
-            );
-        } catch (error) {
-            console.log("Error in skillsListing: ", error);
-            return middleware.sendApiResponse(
-                res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
-                "Internal_Server_Error",
-                null
-            );
-        }
-    },
+    // skillsListing : async (req, res) => {
+    //     try {
+    //         const skills = await Skill.find({
+    //             is_delete: false,
+    //             is_active: true,
+    //         });
+    //         return middleware.sendApiResponse( 
+    //             res,
+    //             Codes.SUCCESS,
+    //             Codes.RESPONSE_SUCCESS,
+    //             "Skills_listed",
+    //             skills
+    //         );
+    //     } catch (error) {
+    //         console.log("Error in skillsListing: ", error);
+    //         return middleware.sendApiResponse(
+    //             res,
+    //             Codes.ERROR,
+    //             Codes.RESPONSE_SUCCESS,
+    //             "Internal_Server_Error",
+    //             null
+    //         );
+    //     }
+    // },
 
     jobRolesListing : async (req, res) => {
         try {
@@ -530,29 +510,33 @@ const authModule = {
         }
     },
 
-    selectSkills: async (skills_id, userId) => {
+    jobRoleSkills: async (req, res) => {
         try {
-            
-            const validSkills = await Skill.find({
-                _id: { $in: skills_id },
-                is_delete: false,
-                is_active: true,
-            }).select("_id");
-            const validSkillIds = validSkills.map(skill => skill._id.toString());
+            const { id } = req.params;
+            const jobRole = await JobRole.findById(id).lean();
+            if (!jobRole) {
+                return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Job role not found", null);
+            }
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Skills fetched successfully", jobRole.skills || []);
+        } catch (error) {
+            console.log("Error in jobRoleSkills: ", error);
+            return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Internal Server Error", null);
+        }
+    },
 
-            const invalidSkillIds = skills_id.filter(id => !validSkillIds.includes(id));
-            if (invalidSkillIds.length > 0) {
-                return
-                     null
+    selectSkills: async (Skills , userId) => {
+        try {
+            if (!Array.isArray(Skills)) {
+                return null;
             }
 
-            // Use $addToSet to push all valid skills into embedded User.skills array (no duplicates)
+            // Use $addToSet to push all skills into embedded User.skills array (no duplicates)
             await User.findByIdAndUpdate(
                 userId,
-                { $addToSet: { skills: { $each: validSkillIds } } },
+                { $addToSet: { skills: { $each: Skills } } },
                 { new: true }
             );
-           return { selectedSkills: validSkillIds } || [];
+            return { selectedSkills: Skills };
 
         } catch (error) {
             console.log("Error in selectSkills: ", error);
@@ -563,18 +547,15 @@ const authModule = {
     getUserProfile: async (userId) => {
         try {
             
-            // Read from embedded User.skills and User.jobRoles
+            // Read from embedded User.skills and User.jobRole
             const user = await User.findById(userId)
-                .populate("skills", "name")
-                .populate("jobRoles.jobRoleId", "name")
+                .populate("jobRole.jobRoleId", "name")
                 .lean();
 
             if (!user) return null;
 
-            const skillNames = user.skills.map(s => s?.name).filter(Boolean);
-            const lastJobRole = user.jobRoles && user.jobRoles.length > 0
-                ? user.jobRoles[user.jobRoles.length - 1]
-                : null;
+            const skillNames = Array.isArray(user.skills) ? user.skills : [];
+            const lastJobRole = user.jobRole;
 
             const responseData = {
                 userId,
@@ -594,9 +575,10 @@ const authModule = {
     setUpPreferences: async (req, res) => {
         try{
             const userId = req.loginUser.id;
-            const { jobRoleId, experienceLevel, skills_id } = req.body;
+            const { jobRoleId, experienceLevel, Skills } = req.body;
           
             const setPref = await authModule.setPreferences(jobRoleId, experienceLevel, userId);
+            console.log("setPref", setPref);
             if(setPref === null){
                 return middleware.sendApiResponse(
                     res,
@@ -607,7 +589,7 @@ const authModule = {
                 );
             }
 
-            const selectSkillsResult = await authModule.selectSkills(skills_id ,  userId);
+            const selectSkillsResult = await authModule.selectSkills(Skills, userId);
             if(selectSkillsResult === null){
                 return middleware.sendApiResponse(
                     res,
@@ -620,8 +602,6 @@ const authModule = {
 
             const getUserProfileResult = await authModule.getUserProfile(userId);
 
-        
-
             return middleware.sendApiResponse(
                 res,
                 Codes.SUCCESS,
@@ -629,7 +609,6 @@ const authModule = {
                 "Preferences_set_up_successfully",
                 getUserProfileResult
             );
-
 
         }catch(error){
             console.log("Error in setUpPreferences: ", error);

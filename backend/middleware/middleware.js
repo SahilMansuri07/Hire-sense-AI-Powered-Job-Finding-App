@@ -138,7 +138,7 @@ async function tokenMiddleware (req, res, next) {
         }
 
       const token = req.headers['token'] || req.headers['authorization'];
-    //   console.log("Token from headers: ", token);
+      console.log("Token from headers: ", token);
         if (!token) {
             return res.status(401).json({ message: "Token missing" });
         }
@@ -167,16 +167,17 @@ async function tokenMiddleware (req, res, next) {
                 null,
             );
         }
-        // console.log("Decoded token: ", decoded);
-        // console.log("Bearer token: ", bearerToken);
+        console.log("Decoded token: ", decoded);
+        console.log("Bearer token: ", bearerToken);
+
         // Verify user exists and is active in MongoDB
         const userToken = await UserDevice.findOne({
-            userId: decoded.id,
+            userId: decoded.id, 
             token: bearerToken,
             is_active: true,
             is_delete: false,
         }).lean();
-        // console.log("userToken: ", userToken);
+        console.log("userToken: ", userToken);
 
         if (!userToken) {
             return sendApiResponse(res, Codes.SUCCESS , Codes.UNAUTHORIZED, "rest_keywords_unauthorized", null);
@@ -197,6 +198,7 @@ async function tokenMiddleware (req, res, next) {
 }
 
 const allowedRoles = (...roles) => {
+    // console.log("roles: ", roles);   
     return (req, res, next) => {
     //    console.log(req.loginUser.role)
         if(!roles.includes(req.loginUser.role)){
