@@ -1,13 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { SignUpAPI, validateUserAPI, loginAPI } from '../../api/api';
+import { authStorage } from '../../utils/authStorage';
 
 export const validateUser = createAsyncThunk(
   'auth/validateUser',
   async (userData, { rejectWithValue }) => {
     try {
-      console.log("User Data: ", userData);
       const response = await validateUserAPI(userData);
-      console.log("Response: ", response);
       if (response.code !== 1) {
         return rejectWithValue(response.message || 'Validation failed');
       }
@@ -48,14 +47,16 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+const session = authStorage.getSession();
+
 const initialState = {
-  user: JSON.parse(localStorage.getItem('user')) || null,
-  token: localStorage.getItem('token') || null,
-  isAuthenticated: !!localStorage.getItem('token'),
-  role: JSON.parse(localStorage.getItem('user'))?.role || null,
+  user: session?.user || null,
+  token: session?.token || null,
+  isAuthenticated: !!session?.token,
+  role: session?.role || null,
   loading: false,
   error: null,
-  tempSignupData: null, // Stores data from Register page before role selection
+  tempSignupData: null, 
 };
 
 const authSlice = createSlice({
@@ -70,12 +71,11 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.role = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      authStorage.clearSession();
     },
     updateUser: (state, action) => {
       state.user = { ...state.user, ...action.payload };
-      localStorage.setItem('user', JSON.stringify(state.user));
+      authStorage.updateUser(state.user);
     }
   },
   extraReducers: (builder) => {
@@ -101,15 +101,14 @@ const authSlice = createSlice({
         state.loading = false;
         if (action.payload?.data?.token) {
           state.token = action.payload.data.token;
-          state.user = action.payload.data; // assuming data contains user details
+          state.user = action.payload.data;
           state.isAuthenticated = true;
-          state.role = action.meta.arg.role; // store role sent in request
-          // Storing role in user data just in case
+          state.role = action.meta.arg.role; 
+          
           const userDataToStore = { ...action.payload.data, role: action.meta.arg.role };
-          localStorage.setItem('token', action.payload.data.token);
-          localStorage.setItem('user', JSON.stringify(userDataToStore));
+          authStorage.setSession(state.role, state.token, userDataToStore);
         }
-        state.tempSignupData = null; // clear temp data
+        state.tempSignupData = null;
       })
       .addCase(signupUser.rejected, (state, action) => {
         state.loading = false;
@@ -127,8 +126,9 @@ const authSlice = createSlice({
           state.user = action.payload.data.user || action.payload.data;
           state.isAuthenticated = true;
           state.role = action.payload.data.role || (action.payload.data.user && action.payload.data.user.role); 
-          localStorage.setItem('token', action.payload.data.token);
-          localStorage.setItem('user', JSON.stringify({ ...state.user, role: state.role }));
+          
+          const userDataToStore = { ...state.user, role: state.role };
+          authStorage.setSession(state.role, state.token, userDataToStore);
         }
       })
       .addCase(loginUser.rejected, (state, action) => {

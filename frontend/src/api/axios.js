@@ -1,5 +1,6 @@
 import axios from "axios";
 import { decryptData, encryptData } from "./crypto";
+import { authStorage } from "../utils/authStorage";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -14,7 +15,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   config.headers["api-key"] = import.meta.env.VITE_API_KEY;
 
-  const token = localStorage.getItem("token");
+  const session = authStorage.getSession();
+  const token = session?.token;
   // console.log(token)
  
   if (token) {
@@ -53,9 +55,29 @@ api.interceptors.response.use(
  
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      let data = error.response.data;
+      if (typeof data === "string") {
+        try {
+          data = decryptData(data);
+        } catch (e) {
+          // ignore decryption errors in error handler
+        }
+      }
+      
+      const message = data?.message || data?.keyword || '';
+      // Also check if the raw string happens to contain these if decryption fails
+      const rawString = typeof error.response.data === 'string' ? error.response.data : '';
+      
+      const isTokenIssue = 
+        message.toLowerCase().includes('token') || 
+        message.toLowerCase().includes('unauthorized') ||
+        rawString.toLowerCase().includes('token') ||
+        !message; // If we can't parse it, default to logging out to be safe but usually we can
+        
+      if (isTokenIssue || message.toLowerCase().includes('expired')) {
+        authStorage.clearSession();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

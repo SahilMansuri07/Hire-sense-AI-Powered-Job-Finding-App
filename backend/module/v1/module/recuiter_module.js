@@ -299,8 +299,158 @@ const recruiterModule = {
             );
         }
     },
+    fetchRecruiterJob : async (req, res) => {
+        try {
+            const { page, limit } = req.body;
+            const recruiterId  = req.loginUser.id;
+            
+                const job = await JobPost.find({
+                    recruiterId,
+                    is_delete: false,
+                }).lean();
 
-    
+                if (!job) {
+                    return middleware.sendApiResponse(
+                        res,
+                        Codes.ERROR,
+                        Codes.RESPONSE_SUCCESS,
+                        "Job_not_found",
+                        null
+                    );
+                }
+
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_SUCCESS,
+                    "Job_fetched_successfully",
+                    job
+            );
+            
+            // Otherwise, fetch paginated list of jobs for this recruiter
+            const currentPage = parseInt(page) || 1;
+            const pageLimit = parseInt(limit) || 10;
+            const skip = (currentPage - 1) * pageLimit;
+
+            const filter = {
+                recruiterId,
+                is_delete: false,
+            };
+
+            const jobs = await JobPost.find(filter)
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(pageLimit)
+                .lean();
+
+            const total = await JobPost.countDocuments(filter);
+            const totalPages = Math.ceil(total / pageLimit);
+
+            return middleware.sendApiResponse(
+                res,
+                Codes.SUCCESS,
+                Codes.RESPONSE_SUCCESS,
+                "Jobs_fetched_successfully",
+                {
+                    jobs,
+                    pagination: {
+                        total,
+                        totalPages,
+                        currentPage,
+                        limit: pageLimit
+                    }
+                }
+            );
+
+        } catch (error) {
+             console.log("Error in fetchRecruiterJob: ", error);
+            return middleware.sendApiResponse(
+                res,
+                Codes.ERROR,
+                Codes.RESPONSE_SUCCESS,
+                "Internal_Server_Error",
+                null
+            );
+        }
+    },
+
+
+    fetchRecruiterJobById : async (req, res) => {
+        try {
+            const {jobId} = req.body;
+            const job = await JobPost.findOne({
+                _id: jobId,
+                recruiterId: req.loginUser.id,
+                is_delete: false,
+            });
+
+            if (!job) {
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.ERROR,
+                    Codes.RESPONSE_SUCCESS,
+                    "Job_not_found",
+                    null
+                );
+            }
+
+            return middleware.sendApiResponse(
+                res,
+                Codes.SUCCESS,
+                Codes.RESPONSE_SUCCESS,
+                "Job_fetched_successfully",
+                job
+            );
+
+        } catch (error) {
+             console.log("Error in fetchRecruiterJobById: ", error);
+            return middleware.sendApiResponse(
+                res,
+                Codes.ERROR,
+                Codes.RESPONSE_SUCCESS,
+                "Internal_Server_Error",
+                null
+            );
+        }
+    },
+    viewApplication: async (req, res) => {
+        try {
+            const { jobId } = req.body;
+            const applications = await Application.find({
+                jobId,
+                recruiterId: req.loginUser.id,
+                is_delete: false,
+            });
+
+             if(!applications){
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.ERROR,
+                    Codes.RESPONSE_SUCCESS,
+                    "Applications_not_found",
+                    null
+                );
+            }
+            
+            return middleware.sendApiResponse(
+                res,
+                Codes.SUCCESS,
+                Codes.RESPONSE_SUCCESS,
+                "Applications_fetched_successfully",
+                applications
+            );
+            
+        } catch (error) {
+            console.log("Error in viewApplication: ", error);
+            return middleware.sendApiResponse(
+                res,
+                Codes.ERROR,
+                Codes.RESPONSE_SUCCESS,
+                "Internal_Server_Error",
+                null
+            );
+        }
+    }
 
     
 }

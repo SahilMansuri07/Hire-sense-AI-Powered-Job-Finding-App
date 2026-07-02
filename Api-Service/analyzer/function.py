@@ -99,6 +99,10 @@ async def generate_job_description(request: Request):
             ai_response = await get_openrouter_response(prompt)
 
         response_json = json.loads(ai_response)
+        
+        if "jobDescription" in response_json:
+            response_json = {"jobDescription": response_json["jobDescription"]}
+            
         return JSONResponse(content=response_json)
     except HTTPException:
         raise

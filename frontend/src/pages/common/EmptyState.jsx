@@ -17,7 +17,7 @@ export function EmptyState() {
           <motion.div animate={{
           y: [0, -20, 0]
         }} transition={{
-          duration: 3,
+          duration: 3,  
           repeat: Infinity,
           ease: 'easeInOut'
         }} className="absolute -top-8 -left-8 w-16 h-16 bg-[#1f7af9]/20 rounded-2xl flex items-center justify-center">

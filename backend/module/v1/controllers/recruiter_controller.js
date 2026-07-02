@@ -19,7 +19,17 @@ const recruiterController = {
         return recruiterModule.generateJobDescription(req, res);
     },
 
+    viewApplication: async (req, res) => {
+        return recruiterModule.viewApplication(req, res);
+    },
 
+    fetchRecruiterJob: async (req, res) => {
+        return recruiterModule.fetchRecruiterJob(req, res);
+    },
+
+    fetchRecruiterJobById: async (req, res) => {
+        return recruiterModule.fetchRecruiterJobById(req, res);
+    },
 };
 
 

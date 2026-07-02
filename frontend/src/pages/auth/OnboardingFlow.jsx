@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Upload, Briefcase, Code, CheckCircle, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { setupPreferencesAPI, uploadResumeAPI, getJobRolesAPI, getJobRoleSkillsAPI } from '../../api/api';
 import { updateUser } from '../../redux/slices/authSlice';
+import { authStorage } from '../../utils/authStorage';
 import toast from 'react-hot-toast';
 
 export function OnboardingFlow() {
@@ -118,6 +119,8 @@ export function OnboardingFlow() {
     setStep(2);
   };
 
+    const { user } = useSelector(state => state.auth);
+
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
@@ -129,7 +132,7 @@ export function OnboardingFlow() {
         }
         const res = await uploadResumeAPI(fd);
         if (res?.data) {
-          localStorage.setItem('resumeAnalysis', JSON.stringify(res.data));
+          authStorage.setResumeAnalysis(user?._id || 'unknown', res.data);
         }
       }
       

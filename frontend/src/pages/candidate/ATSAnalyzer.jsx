@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router';
 import { Upload, FileText, ArrowLeft } from 'lucide-react';
 import { uploadResumeAPI } from '../../api/api';
 import toast from 'react-hot-toast';
+import { useSelector } from 'react-redux';
+import { authStorage } from '../../utils/authStorage';
 
 export function ATSAnalyzer() {
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState(null);
+  const { user } = useSelector(state => state.auth);
 
   const handleUpload = async () => {
     if (!file) return toast.error("Please upload a resume first");
@@ -21,7 +24,7 @@ export function ATSAnalyzer() {
     try {
       const res = await uploadResumeAPI(fd);
       if (res?.data) {
-        localStorage.setItem('resumeAnalysis', JSON.stringify(res.data));
+        authStorage.setResumeAnalysis(user?._id || 'unknown', res.data);
       }
       toast.success("Resume analyzed successfully!");
       navigate('/candidate/dashboard');

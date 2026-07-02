@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Target, TrendingUp, Award, Search, FileText, Brain, Video, Bell, User, Settings, X, Upload, LogOut } from 'lucide-react';
 import { RadialBarChart, RadialBar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
-import { getUserDashboardAPI, uploadResumeAPI } from '../../api/api';
+import { getUserDashboardAPI, getResumeScoreAPI } from '../../api/api';
 import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../redux/slices/authSlice';
 import { ATSResultDetails } from './ATSResultDetails';
+import { authStorage } from '../../utils/authStorage';
 
 export function CandidateDashboard() {
   const navigate = useNavigate();
@@ -22,11 +23,34 @@ export function CandidateDashboard() {
     navigate('/');
   };
 
+  const [atsScore, setAtsScore] = useState(0);
+  const [parsedData, setParsedData] = useState({});
+
   useEffect(() => {
-    getUserDashboardAPI().then(res => {
-      setData(res.data);
-    }).catch(err => console.error(err))
-      .finally(() => setLoading(false));
+    Promise.all([
+      getUserDashboardAPI().catch(err => ({ data: null })),
+      getResumeScoreAPI().catch(err => ({ data: null }))
+    ]).then(([dashboardRes, scoreRes]) => {
+      if (dashboardRes?.data) setData(dashboardRes.data);
+      
+      let localData = {};
+      try {
+        const stored = authStorage.getResumeAnalysis(user?._id || 'unknown');
+        if (stored) {
+          localData = stored;
+        }
+      } catch(e) {}
+
+      if (Object.keys(localData).length > 0) {
+        const jdMatchStr = localData["JD Match"] || localData["jd_match"] || localData["ats_score"] || "0";
+        const parsedScore = typeof jdMatchStr === 'number' ? jdMatchStr : parseInt(String(jdMatchStr).replace('%', ''), 10) || 0;
+        setAtsScore(parsedScore);
+        setParsedData(localData);
+      } else if (scoreRes?.data) {
+        setAtsScore(scoreRes.data.stats?.atsScore || 0);
+        setParsedData(scoreRes.data.resumeInsights || {});
+      }
+    }).finally(() => setLoading(false));
   }, []);
   
   if (loading) return <div className="min-h-screen bg-[#0f1723] text-white flex items-center justify-center">Loading...</div>;
@@ -40,15 +64,7 @@ export function CandidateDashboard() {
     recentAppliedJobs = []
   } = data || {};
 
-  // Retrieve ATS Score from local storage (saved when uploading resume via uploadResumeAPI)
-  let savedAtsScore = 0;
-  let parsedData = {};
-  try {
-    parsedData = JSON.parse(localStorage.getItem('resumeAnalysis') || '{}');
-    savedAtsScore = parsedData["JD Match"] || parsedData["jd_match"] || parsedData["ats_score"] || 0;
-  } catch(e) {}
-  
-  const atsData = [{ name: 'ATS', value: Number(savedAtsScore) || 0, fill: '#1f7af9' }];
+  const atsData = [{ name: 'ATS', value: Number(atsScore) || 0, fill: '#1f7af9' }];
 
   const progressData = [
     { month: 'Jan', score: 65 },
@@ -66,6 +82,7 @@ export function CandidateDashboard() {
             <div className="hidden md:flex items-center gap-6">
               <button onClick={() => navigate('/candidate/dashboard')} className="text-[#1f7af9] font-semibold">Dashboard</button>
               <button onClick={() => navigate('/candidate/jobs')} className="text-gray-400 hover:text-white transition-colors">Jobs</button>
+              <button onClick={() => navigate('/candidate/my-applications')} className="text-gray-400 hover:text-white transition-colors">My Applications</button>
               <button onClick={() => navigate('/candidate/ats-analyzer')} className="text-gray-400 hover:text-white transition-colors">ATS Analyzer</button>
               <button onClick={() => navigate('/candidate/interview-setup')} className="text-gray-400 hover:text-white transition-colors">Mock Interview</button>
             </div>
@@ -146,7 +163,10 @@ export function CandidateDashboard() {
         {/* Applied Jobs & Application Status */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl">
-            <h3 className="text-xl font-bold mb-6">Recent Jobs Applied</h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">Recent Jobs Applied</h3>
+              <button onClick={() => navigate('/candidate/my-applications')} className="text-sm text-[#1f7af9] hover:underline">View All</button>
+            </div>
             <div className="space-y-4">
               {recentAppliedJobs.length === 0 && <p className="text-gray-400">No jobs applied yet.</p>}
               {recentAppliedJobs.slice(0, 3).map((job, idx) => (

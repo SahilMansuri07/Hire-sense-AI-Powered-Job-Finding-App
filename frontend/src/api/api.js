@@ -20,3 +20,5 @@ export const applyJobAPI = (id, data) => api.post(`/applicant/apply-job/${id}`, 
 export const getAppliedJobsAPI = () => api.get('/applicant/applied-jobs');
 export const getApplicationStatusAPI = () => api.get('/applicant/application-status');
 export const getResumeScoreAPI = () => api.get('/applicant/resume-score');
+
+// recruiter modules API 

@@ -26,6 +26,7 @@ const HRInterview = lazy(() => import("../pages/candidate/HRInterview").then(m =
 const RecruiterDashboard = lazy(() => import("../pages/recruiter/RecruiterDashboard").then(m => ({ default: m.RecruiterDashboard })));
 const CandidateProfileRecruiter = lazy(() => import("../pages/recruiter/CandidateProfileRecruiter").then(m => ({ default: m.CandidateProfileRecruiter })));
 const JobPostingCreator = lazy(() => import("../pages/recruiter/JobPostingCreator").then(m => ({ default: m.JobPostingCreator })));
+const RecruiterJobsPage = lazy(() => import("../pages/recruiter/RecruiterJobsPage").then(m => ({ default: m.RecruiterJobsPage })));
 const InterviewScheduler = lazy(() => import("../pages/recruiter/InterviewScheduler").then(m => ({ default: m.InterviewScheduler })));
 const TalentPipeline = lazy(() => import("../pages/recruiter/TalentPipeline").then(m => ({ default: m.TalentPipeline })));
 
@@ -36,6 +37,7 @@ const Notifications = lazy(() => import("../pages/common/Notifications").then(m 
 const EmptyState = lazy(() => import("../pages/common/EmptyState").then(m => ({ default: m.EmptyState })));
 
 import { ProtectedRoute } from "./ProtectedRoute";
+import { RecruiterLayout } from "../components/layout/RecruiterLayout";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -48,7 +50,7 @@ export const router = createBrowserRouter(
       <Route path="/onboarding" element={<ProtectedRoute><OnboardingFlow /></ProtectedRoute>} />
 
       {/* ── Candidate ── */}
-      <Route path="/candidate">
+      <Route path="/candidate" element={<ProtectedRoute role="user"><Outlet /></ProtectedRoute>}>
         <Route path="dashboard" element={<CandidateDashboard />} />
         <Route path="jobs" element={<JobSearch />} />
         <Route path="jobs/:id" element={<JobDetail />} />
@@ -66,16 +68,18 @@ export const router = createBrowserRouter(
       </Route>
 
       {/* ── Recruiter ── */}
-      <Route path="/recruiter">
+      <Route path="/recruiter" element={<ProtectedRoute role="recruiter"><RecruiterLayout /></ProtectedRoute>}>
         <Route path="dashboard" element={<RecruiterDashboard />} />
+        <Route path="candidates" element={<EmptyState />} />
         <Route path="candidate/:id" element={<CandidateProfileRecruiter />} />
+        <Route path="jobs" element={<RecruiterJobsPage />} />
         <Route path="post-job" element={<JobPostingCreator />} />
+        <Route path="edit-job/:id" element={<JobPostingCreator />} />
         <Route path="scheduler" element={<InterviewScheduler />} />
-        <Route path="pipeline" element={<TalentPipeline />} />
       </Route>
 
       {/* ── Admin ── */}
-      <Route path="/admin" element={<AdminPanel />} />
+      <Route path="/admin" element={<ProtectedRoute role="admin"><AdminPanel /></ProtectedRoute>} />
 
       {/* ── Common ── */}
       <Route path="/analytics" element={<Analytics />} />

@@ -66,12 +66,10 @@ const userModule = {
                     null
                 );
             }
-            console.log("req.body: ", userId );
             const page = parseInt(req.body.page) || 1;
             const limit = parseInt(req.body.limit) || 10;
             const skip = (page - 1) * limit;
-            const filter = buildFilter(req.body); // uses all filters if passed, otherwise just { is_active: true }
-            console.log("filter: ", filter);
+            const filter = buildFilter(req.body);
             const jobs = await JobPost.find(filter).skip(skip).limit(limit).lean();
             const total = await JobPost.countDocuments(filter);
             const totalPages = Math.ceil(total / limit);
@@ -248,7 +246,7 @@ const userModule = {
     myApplications: async (req, res) => {
         try {
             const userId = req.loginUser.id; 
-            const jobApplications = await JobApplicant.find({ userId }).lean();
+            const jobApplications = await JobApplicant.find({ userId }).populate('jobId').lean();
             return middleware.sendApiResponse(
                 res,
                 Codes.SUCCESS,
