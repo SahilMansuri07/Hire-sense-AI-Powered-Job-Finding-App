@@ -2,9 +2,6 @@
 fastapi==0.115.1
 uvicorn==0.34.0
 
-# MongoDB Async
-motor==3.1.2
-
 # Auth and security
 python-dotenv==1.0.1
 

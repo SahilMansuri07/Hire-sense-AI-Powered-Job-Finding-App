@@ -1,25 +1,11 @@
 import asyncio
-from _winapi import CREATE_NEW_CONSOLE
 from common.common import extract_pdf_text, prepare_prompt, prepare_keyword_match_prompt, get_gemini_response, get_openrouter_response
 from common.prompts import job_post_prompts
 from fastapi.responses import JSONResponse
-import os
 import json
-from dotenv import load_dotenv
-from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
-from motor.motor_asyncio import AsyncIOMotorClient
 import urllib.request
 import io
-
-
-# Always load Backend/.env regardless of current working directory.
-ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
-load_dotenv(dotenv_path=ENV_PATH)
-MONGO_URI = os.getenv("MONGO_URI")
-client = AsyncIOMotorClient(MONGO_URI)
-db = client["Airesume"]
-resume_collection = db["resumes"]
 
 router = APIRouter()
 
