@@ -6,8 +6,6 @@ import Codes from "../../../config/status_codes.js";
 import bcryptjs from "bcryptjs";
 import { extractPdfTextFromPython } from "../../../python_api/pythonService.js";
 import JobRole from "../../../models/JobRole.js";
-import Skill from "../../../models/Skills.js";
-import { deleteFromCloudinary, uploadBufferToCloudinary } from "../../../config/cloudinary.js";
 
 const authModule = {
     checkCredentials : async (req, res) => {
@@ -185,7 +183,7 @@ const authModule = {
             }
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
+                Codes.INTERNAL_ERROR,
                 Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
@@ -205,8 +203,8 @@ const authModule = {
                 if (!email || !password) {
                     return middleware.sendApiResponse(
                         res,
-                        Codes.ERROR,
-                        Codes.RESPONSE_SUCCESS,
+                        Codes.SUCCESS,
+                        Codes.RESPONSE_ERROR,
                         "Email_and_password_required",
                         null
                     );
@@ -221,7 +219,7 @@ const authModule = {
                     return middleware.sendApiResponse(
                         res,
                         Codes.SUCCESS,
-                        Codes.RESPONSE_SUCCESS,
+                        Codes.RESPONSE_ERROR,
                         "Invalid_email_or_password",
                         null
                     );
@@ -234,7 +232,7 @@ const authModule = {
                     return middleware.sendApiResponse(
                         res,
                         Codes.SUCCESS,
-                        Codes.RESPONSE_SUCCESS,
+                        Codes.RESPONSE_ERROR,
                         "Invalid_email_or_password",
                         null
                     );
@@ -248,8 +246,8 @@ const authModule = {
                 if (!social_id || !login_type) {
                     return middleware.sendApiResponse(
                         res,
-                        Codes.ERROR,
-                        Codes.RESPONSE_SUCCESS,
+                        Codes.SUCCESS,
+                        Codes.RESPONSE_ERROR,
                         "Social_id_and_login_type_required",
                         null
                     );
@@ -265,7 +263,7 @@ const authModule = {
                     return middleware.sendApiResponse(
                         res,
                         Codes.SUCCESS,
-                        Codes.RESPONSE_SUCCESS,
+                        Codes.RESPONSE_ERROR,
                         "User_not_found_social_login",
                         null
                     );
@@ -307,72 +305,73 @@ const authModule = {
 
    uploadResume : async (req , res ) =>{
         try {
-            // const userId = req.loginUser?.id;
-            const userId = "693c9001ebf9e123580e04eb";  
+            const userId = req.loginUser?.id;
             console.log("uploadResume called - loginUser:", req.loginUser && { id: req.loginUser.id, role: req.loginUser.role });
 
             if (!userId) {
                 console.log("uploadResume: missing userId on req.loginUser");
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
-                    "File_required",
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
+                    "User_id_required",
                     null
                 );
             }
           
-         
-            const file = req.file || req.files?.resume?.[0] || req.files?.file?.[0] || null;
-            const job_description = req.body.job_description;
-        
-          
+            console.log("uploadResume - req.body:", req.body);
+            const { resumeUrl, fileName, fileSize, fileType, job_description, cloudinaryPublicId } = req.body || {};
             
-            if (!file) {
+            if (!resumeUrl || !resumeUrl.startsWith('http')) {
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
+                    "Valid_resume_url_required",
+                    null
+                );
+            }
+            
+            if (fileType && !fileType.toLowerCase().includes('pdf')) {
                 return middleware.sendApiResponse(
                     res,
                     Codes.ERROR,
                     Codes.RESPONSE_SUCCESS,
-                    "File_required",
+                    "Only_PDF_allowed",
                     null
                 );
             }
 
-            const uploadedFile = await uploadBufferToCloudinary(file.buffer, file.originalname, userId);
-
-            const fileUrl = uploadedFile.secure_url || uploadedFile.url || null;
-            const cloudinaryPublicId = uploadedFile.public_id || null;
+            const fileUrl = resumeUrl;
+            const safeFileName = fileName || 'resume.pdf';
             
             // Check if a resume with same userId + fileName exists → UPDATE instead of create
-            const existingResume = await Resume.findOne({ userId, fileName: file.originalname });
+            const existingResume = await Resume.findOne({ userId, fileName: safeFileName });
 
-            console.log("uploadResume: existingResume found:", existingResume ? { id: existingResume._id?.toString(), cloudinaryPublicId: existingResume.cloudinaryPublicId } : null);
+            console.log("uploadResume: existingResume found:", existingResume ? { id: existingResume._id?.toString() } : null);
 
             let resume;
 
             if (existingResume) {
                 resume = await Resume.findOneAndUpdate(
-                    { userId, fileName: file.originalname },
+                    { userId, fileName: safeFileName },
                     {
                         fileUrl,
-                        fileName: file.originalname,
-                        cloudinaryPublicId,
-                        fileSize: uploadedFile.bytes || file.size,
+                        fileName: safeFileName,
+                        cloudinaryPublicId: cloudinaryPublicId || null,
+                        fileSize: fileSize || 0,
                         uploadedAt: new Date(),
                     },
                     { returnDocument: 'after' }
                 );
                 console.log("uploadResume: updated existing resume for userId:", userId, "resumeId:", resume._id?.toString());
-                // if (existingResume.cloudinaryPublicId && existingResume.cloudinaryPublicId !== cloudinaryPublicId) {
-                //      await deleteFromCloudinary(existingResume.cloudinaryPublicId).catch(() => null);
-                // }
             } else {
                 resume = await Resume.create({
                     userId,
                     fileUrl,
-                    fileName: file.originalname,
-                    cloudinaryPublicId,
-                    fileSize: uploadedFile.bytes || file.size,
+                    fileName: safeFileName,
+                    cloudinaryPublicId: cloudinaryPublicId || null,
+                    fileSize: fileSize || 0,
                     uploadedAt: new Date(),
                 });
                 console.log("uploadResume: created new resume for userId:", userId, "resumeId:", resume._id?.toString());
@@ -381,8 +380,7 @@ const authModule = {
             let pyResponse = null;
             
             try {
-               const pythonResult = await extractPdfTextFromPython(file , job_description);    
-            //    console.log("pythonResult: ",pythonResult);
+               const pythonResult = await extractPdfTextFromPython(fileUrl, job_description);    
                 if(pythonResult){
                     pyResponse = pythonResult;
 
@@ -404,15 +402,15 @@ const authModule = {
                 Codes.SUCCESS,
                 Codes.RESPONSE_SUCCESS,
                 "Resume_uploaded_successfully",   
-                    pyResponse
-                );
+                pyResponse
+            );
 
         } catch (error) {
             console.log("Error in uploadResume: ", error);
             return middleware.sendApiResponse(
                 res, 
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -502,8 +500,8 @@ const authModule = {
             console.log("Error in jobRolesListing: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -515,12 +513,12 @@ const authModule = {
             const { id } = req.params;
             const jobRole = await JobRole.findById(id).lean();
             if (!jobRole) {
-                return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Job role not found", null);
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Job_role_not_found", null);
             }
-            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Skills fetched successfully", jobRole.skills || []);
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Skills_fetched_successfully", jobRole.skills || []);
         } catch (error) {
             console.log("Error in jobRoleSkills: ", error);
-            return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Internal Server Error", null);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
         }
     },
 
@@ -582,8 +580,8 @@ const authModule = {
             if(setPref === null){
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Invalid_job_role_or_experience",
                     null
                 );
@@ -593,8 +591,8 @@ const authModule = {
             if(selectSkillsResult === null){
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "One_or_more_invalid_skills",
                     null
                 );
@@ -614,8 +612,8 @@ const authModule = {
             console.log("Error in setUpPreferences: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );

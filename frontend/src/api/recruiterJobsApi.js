@@ -25,3 +25,15 @@ export const deleteJobAPI = async (jobId) => {
 export const generateJobDescriptionAPI = async (data) => {
   return await api.post('/recruiter/generate-job-description', data);
 };
+
+export const fetchDashboardSummaryAPI = async () => {
+  return await api.get('/recruiter/dashboard-summary');
+};
+
+export const fetchCandidatesAPI = async (page = 1, limit = 10) => {
+  return await api.get(`/recruiter/candidates?page=${page}&limit=${limit}`);
+};
+
+export const fetchCandidateProfileAPI = async (id) => {
+  return await api.get(`/recruiter/candidates/${id}`);
+};

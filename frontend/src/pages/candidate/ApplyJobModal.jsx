@@ -21,9 +21,14 @@ export function ApplyJobModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleFileChange = e => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        import('react-hot-toast').then(toast => toast.default.error("Only PDF files are allowed!"));
+        return;
+      }
       setFormData({
         ...formData,
-        resumeFile: e.target.files[0]
+        resumeFile: file
       });
     }
   };
@@ -33,17 +38,53 @@ export function ApplyJobModal({
     setIsSubmitting(true);
 
     try {
-      const fd = new FormData();
-      if (formData.resumeFile) fd.append('file', formData.resumeFile);
-      if (formData.portfolio) fd.append('portfolio_link', formData.portfolio);
-      if (formData.fullName) fd.append('fullName', formData.fullName);
-      if (formData.email) fd.append('email', formData.email);
-      if (formData.phone) fd.append('phone', formData.phone);
-      if (formData.coverLetter) fd.append('coverLetter', formData.coverLetter);
-      if (formData.linkedIn) fd.append('linkedIn', formData.linkedIn);
+      const toast = (await import('react-hot-toast')).default;
+      let resumeData = null;
+
+      if (formData.resumeFile) {
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+        
+        if (!cloudName || !uploadPreset) {
+          toast.error("Cloudinary configuration is missing in frontend .env");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const cloudFd = new FormData();
+        cloudFd.append('file', formData.resumeFile);
+        cloudFd.append('upload_preset', uploadPreset);
+
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
+          method: 'POST',
+          body: cloudFd
+        });
+        
+        const cloudData = await cloudRes.json();
+        if (!cloudRes.ok) {
+          throw new Error(cloudData.error?.message || "Failed to upload resume to Cloudinary");
+        }
+        
+        resumeData = {
+          resumeUrl: cloudData.secure_url,
+          fileName: formData.resumeFile.name,
+          fileSize: formData.resumeFile.size,
+          cloudinaryPublicId: cloudData.public_id
+        };
+      }
+
+      const payload = {
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        portfolio_link: formData.portfolio,
+        coverLetter: formData.coverLetter,
+        linkedIn: formData.linkedIn,
+        resumeData: resumeData
+      };
 
       const { applyJobAPI } = await import('../../api/api');
-      await applyJobAPI(jobId, fd);
+      await applyJobAPI(jobId, payload);
 
       setStep('success');
       setTimeout(() => {
@@ -164,7 +205,7 @@ export function ApplyJobModal({
                     </div> : <>
                       <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400 group-hover:text-[#1f7af9] transition-colors" />
                       <p className="text-white mb-2">Click to upload or drag and drop</p>
-                      <p className="text-sm text-gray-500">PDF, DOC, DOCX (Max 5MB)</p>
+                      <p className="text-sm text-gray-500">PDF ONLY (Max 5MB)</p>
                     </>}
                   </label>
                 </div>

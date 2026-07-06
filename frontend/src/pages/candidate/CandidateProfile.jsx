@@ -1,11 +1,15 @@
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Mail, MapPin, Briefcase, Calendar, Award, FileText, Video } from 'lucide-react';
 import { useSelector } from 'react-redux';
+import { authStorage } from '../../utils/authStorage';
 
 export function CandidateProfile() {
   const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
-  const skills = ['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'GraphQL', 'Docker', 'Git'];
+  const skills = user?.skills || [];
+  const resumeAnalysis = authStorage.getResumeAnalysis(user?._id || user?.id);
+  const atsScore = resumeAnalysis?.["JD Match"] || resumeAnalysis?.["jd_match"] || resumeAnalysis?.["ats_score"] || 0;
+  const resumeName = user?.name ? `${user.name.toLowerCase().replace(/\s+/g, '_')}_resume.pdf` : 'resume.pdf';
   const interviews = [{
     company: 'TechCorp',
     role: 'Senior Frontend Dev',
@@ -102,14 +106,14 @@ export function CandidateProfile() {
             </div>
             <div className="p-4 bg-white/5 rounded-xl border border-white/10 mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold">resume_alex_johnson.pdf</span>
+                <span className="font-semibold">{resumeName}</span>
                 <span className="px-3 py-1 bg-[#10b981]/20 border border-[#10b981] rounded text-[#10b981] text-sm">
-                  84% ATS
+                  {atsScore}% ATS
                 </span>
               </div>
               <p className="text-sm text-gray-400">Updated 5 days ago</p>
             </div>
-            <button className="w-full py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all">
+            <button onClick={() => navigate(`/candidate/ats-analyzer`)} className="w-full py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all">
               Upload New Resume
             </button>
           </div>

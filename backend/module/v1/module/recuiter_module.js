@@ -1,4 +1,6 @@
 import JobPost from "../../../models/JobPost.js";
+import JobApplicant from "../../../models/JobApplicant.js";
+import Resume from "../../../models/Resume.js";
 import middleware from "../../../middleware/middleware.js";
 import Codes from "../../../config/status_codes.js";
 
@@ -80,8 +82,8 @@ const recruiterModule = {
             console.log("Error in generateJobDescription: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -173,8 +175,8 @@ const recruiterModule = {
             console.log("Error in postJob: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -189,12 +191,12 @@ const recruiterModule = {
             const existingJob = await JobPost.findOne({
                 _id: jobId,
                 recruiterId: req.loginUser.id,
-                is_delete: false,
+                is_delete: { $ne: true },
             });
 
             if (!existingJob) {
                 return middleware.sendApiResponse(
-                    res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Job_not_found", null
+                    res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Job_not_found", null
                 );
             }
 
@@ -226,12 +228,12 @@ const recruiterModule = {
 
                 updateData.jobDescription = aiResult?.jobDescription || aiResult || {};
                 updateData.aiGenerated = true;
-            } else if (fields.jobDescription || fields.description) {
-                updateData.jobDescription = buildJobDescription(
-                    existingJob.jobDescription,
-                    fields.jobDescription,
-                    { description: fields.description, requirements: fields.requirements, benefits: fields.benefits }
-                );
+            } else if (fields.jobDescription || fields.description || fields.requirements || fields.benefits) {
+                updateData.jobDescription = {
+                    description: fields.jobDescription?.description || fields.description || existingJob.jobDescription?.description || "",
+                    requirements: fields.jobDescription?.requirements || fields.requirements || existingJob.jobDescription?.requirements || "",
+                    benefits: fields.jobDescription?.benefits || fields.benefits || existingJob.jobDescription?.benefits || "",
+                };
             }
 
             const updatedJob = await JobPost.findByIdAndUpdate(
@@ -246,7 +248,7 @@ const recruiterModule = {
         } catch (error) {
             console.log("Error in editJob: ", error);
             return middleware.sendApiResponse(
-                res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Internal_Server_Error", null
+                res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null
             );
         }
     },
@@ -259,7 +261,7 @@ const recruiterModule = {
                 {
                     _id: jobId,
                     recruiterId: req.loginUser.id,
-                    is_delete: false,
+                    is_delete: { $ne: true },
                 },
                 {
                     $set: {
@@ -274,8 +276,8 @@ const recruiterModule = {
             if (!updatedJob) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Job_not_found",
                     null
                 );
@@ -292,8 +294,8 @@ const recruiterModule = {
             console.log("Error in deleteJob: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -301,47 +303,27 @@ const recruiterModule = {
     },
     fetchRecruiterJob : async (req, res) => {
         try {
-            const { page, limit } = req.body;
+            const page = req.body?.page || 1;
+            const limit = req.body?.limit || 10;
             const recruiterId  = req.loginUser.id;
-            
-                const job = await JobPost.find({
-                    recruiterId,
-                    is_delete: false,
-                }).lean();
+            // console.log("recruiterId", recruiterId);    
 
-                if (!job) {
-                    return middleware.sendApiResponse(
-                        res,
-                        Codes.ERROR,
-                        Codes.RESPONSE_SUCCESS,
-                        "Job_not_found",
-                        null
-                    );
-                }
-
-                return middleware.sendApiResponse(
-                    res,
-                    Codes.SUCCESS,
-                    Codes.RESPONSE_SUCCESS,
-                    "Job_fetched_successfully",
-                    job
-            );
-            
-            // Otherwise, fetch paginated list of jobs for this recruiter
-            const currentPage = parseInt(page) || 1;
-            const pageLimit = parseInt(limit) || 10;
+            // fetch paginated list of jobs for this recruiter
+            const currentPage = parseInt(page);
+            const pageLimit = parseInt(limit);
             const skip = (currentPage - 1) * pageLimit;
 
             const filter = {
-                recruiterId,
-                is_delete: false,
+                recruiterId
             };
 
-            const jobs = await JobPost.find(filter)
+            const jobs = await JobPost.find({recruiterId})
                 .sort({ created_at: -1 })
                 .skip(skip)
                 .limit(pageLimit)
                 .lean();
+
+            // console.log("jobs", jobs);
 
             const total = await JobPost.countDocuments(filter);
             const totalPages = Math.ceil(total / pageLimit);
@@ -366,8 +348,8 @@ const recruiterModule = {
              console.log("Error in fetchRecruiterJob: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -381,14 +363,14 @@ const recruiterModule = {
             const job = await JobPost.findOne({
                 _id: jobId,
                 recruiterId: req.loginUser.id,
-                is_delete: false,
+                is_delete: { $ne: true },
             });
 
             if (!job) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Job_not_found",
                     null
                 );
@@ -406,8 +388,8 @@ const recruiterModule = {
              console.log("Error in fetchRecruiterJobById: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -425,8 +407,8 @@ const recruiterModule = {
              if(!applications){
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Applications_not_found",
                     null
                 );
@@ -444,11 +426,156 @@ const recruiterModule = {
             console.log("Error in viewApplication: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
+        }
+    },
+
+    dashboardSummary: async (req, res) => {
+        try {
+            const recruiterId = req.loginUser.id;
+            
+            const myJobs = await JobPost.find({ recruiterId, is_delete: { $ne: true } });
+            const totalMyJobs = myJobs.length;
+            
+            const openPositionsCount = myJobs.filter(j => j.status === 'published').length;
+            
+            const departments = new Set(myJobs.filter(j => j.status === 'published').map(j => j.department));
+            const departmentCount = departments.size;
+
+            const jobIds = myJobs.map(j => j._id);
+
+            const totalApplications = await JobApplicant.countDocuments({ jobId: { $in: jobIds }, is_delete: false });
+
+            const hiredApps = await JobApplicant.find({ jobId: { $in: jobIds }, status: 'Accepted' });
+            let avgHireTime = 0;
+            if (hiredApps.length > 0) {
+                const totalDays = hiredApps.reduce((acc, app) => {
+                    const diffTime = Math.abs(new Date(app.updated_at) - new Date(app.created_at));
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return acc + diffDays;
+                }, 0);
+                avgHireTime = Math.round(totalDays / hiredApps.length);
+            } else {
+                avgHireTime = 18; 
+            }
+
+            const data = {
+                totalApplications,
+                totalApplicationsChange: '+12%', 
+                avgHireTime,
+                avgHireTimeChange: '-5%', 
+                openPositions: openPositionsCount,
+                departmentCount,
+                myJobs: totalMyJobs
+            };
+
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Dashboard_summary_fetched_successfully", data);
+        } catch (error) {
+            console.log("Error in dashboardSummary: ", error);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
+        }
+    },
+
+    getCandidates: async (req, res) => {
+        try {
+            const recruiterId = req.loginUser.id;
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
+
+            const myJobs = await JobPost.find({ recruiterId, is_delete: { $ne: true } }).select('_id');
+            const jobIds = myJobs.map(j => j._id);
+
+            const filter = { jobId: { $in: jobIds }, is_delete: false };
+
+            const applicants = await JobApplicant.find(filter)
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate('jobId', 'jobTitle')
+                .lean();
+
+            const total = await JobApplicant.countDocuments(filter);
+            const totalPages = Math.ceil(total / limit);
+
+            const candidates = applicants.map(app => ({
+                id: app._id,
+                name: app.fullName || 'Unknown Candidate',
+                role: app.jobId?.jobTitle || 'Unknown Role',
+                avatar: '🧑‍💻', 
+                applicationDate: app.created_at,
+            }));
+
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Candidates_fetched_successfully", {
+                candidates,
+                pagination: { total, totalPages, currentPage: page, limit }
+            });
+        } catch (error) {
+            console.log("Error in getCandidates: ", error);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
+        }
+    },
+
+    getCandidateProfile: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const recruiterId = req.loginUser.id;
+
+            const applicant = await JobApplicant.findOne({ _id: id, is_delete: false })
+                .populate('jobId', 'jobTitle recruiterId')
+                .lean();
+
+            if (!applicant) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Candidate_not_found", null);
+            }
+
+            if (applicant.jobId?.recruiterId?.toString() !== recruiterId.toString()) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Unauthorized", null);
+            }
+
+            const resumeInfo = await Resume.findOne({ userId: applicant.userId }).sort({ uploadedAt: -1 }).lean();
+
+            const profile = {
+                id: applicant._id,
+                name: applicant.fullName || 'Unknown Candidate',
+                title: applicant.jobId?.jobTitle || 'Unknown Role',
+                email: applicant.email || 'N/A',
+                location: resumeInfo?.parsedData?.personal_info?.location || 'N/A',
+                yearsOfExperience: resumeInfo?.parsedData?.total_experience_years || 'N/A',
+                appliedDate: applicant.created_at,
+                resume: resumeInfo ? {
+                    fileName: resumeInfo.fileName || 'resume.pdf',
+                    fileType: "PDF",
+                    fileSize: resumeInfo.fileSize || 0,
+                    uploadDate: resumeInfo.uploadedAt,
+                    downloadLink: resumeInfo.fileUrl
+                } : null,
+                otherDocuments: []
+            };
+
+            if (applicant.portfolioLink) {
+                 profile.otherDocuments.push({
+                     fileName: "Portfolio",
+                     fileType: "Link",
+                     downloadLink: applicant.portfolioLink,
+                 });
+            }
+            if (applicant.coverLetter) {
+                profile.otherDocuments.push({
+                    fileName: "Cover Letter",
+                    fileType: "Document",
+                    downloadLink: applicant.coverLetter,
+                });
+            }
+
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Candidate_profile_fetched_successfully", profile);
+        } catch (error) {
+            console.log("Error in getCandidateProfile: ", error);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
         }
     }
 

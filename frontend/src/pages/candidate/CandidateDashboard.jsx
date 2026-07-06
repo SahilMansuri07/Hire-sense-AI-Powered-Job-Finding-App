@@ -23,7 +23,7 @@ export function CandidateDashboard() {
     navigate('/');
   };
 
-  const [atsScore, setAtsScore] = useState(0);
+  const [atsScore, setAtsScore] = useState(0);  
   const [parsedData, setParsedData] = useState({});
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export function CandidateDashboard() {
       <nav className="border-b border-white/10 bg-[#0f1723]/95 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <h1 className="text-xl font-bold">HireSense AI</h1>
+            <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/')}>HireSense AI</h1>
             <div className="hidden md:flex items-center gap-6">
               <button onClick={() => navigate('/candidate/dashboard')} className="text-[#1f7af9] font-semibold">Dashboard</button>
               <button onClick={() => navigate('/candidate/jobs')} className="text-gray-400 hover:text-white transition-colors">Jobs</button>

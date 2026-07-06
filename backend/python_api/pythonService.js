@@ -14,15 +14,19 @@ async function readUploadBuffer(file) {
   return null;
 }
 
-export async function extractPdfTextFromPython(file, job_description) {
+export async function extractPdfTextFromPython(fileOrUrl, job_description) {
   try {
-    const fileBuffer = await readUploadBuffer(file);
-
-    if (!fileBuffer) return null;
-
     const formData = new FormData();
-    const resumeBlob = new Blob([fileBuffer], { type: file.mimetype || "application/pdf" });
-    formData.append("resume", resumeBlob, file.originalname || "resume.pdf");
+    
+    if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
+      formData.append("resume_url", fileOrUrl);
+    } else {
+      const fileBuffer = await readUploadBuffer(fileOrUrl);
+      if (!fileBuffer) return null;
+      const resumeBlob = new Blob([fileBuffer], { type: fileOrUrl.mimetype || "application/pdf" });
+      formData.append("resume", resumeBlob, fileOrUrl.originalname || "resume.pdf");
+    }
+    
     formData.append("job_description", job_description || "");
 
     const response = await fetch(`${PYTHON_API_BASE_URL}/analyze`, {
@@ -64,15 +68,19 @@ export async function getAiJobDescription(payload) {
   return response.json();
 }
 
-export async function extractKeywordsFromPython(file, jobDescription = "") {
+export async function extractKeywordsFromPython(fileOrUrl, jobDescription = "") {
   try {
-    const fileBuffer = await readUploadBuffer(file);
-
-    if (!fileBuffer) return null;
-
     const formData = new FormData();
-    const resumeBlob = new Blob([fileBuffer], { type: file.mimetype || "application/pdf" });
-    formData.append("resume", resumeBlob, file.originalname || "resume.pdf");
+    
+    if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
+      formData.append("resume_url", fileOrUrl);
+    } else {
+      const fileBuffer = await readUploadBuffer(fileOrUrl);
+      if (!fileBuffer) return null;
+      const resumeBlob = new Blob([fileBuffer], { type: fileOrUrl.mimetype || "application/pdf" });
+      formData.append("resume", resumeBlob, fileOrUrl.originalname || "resume.pdf");
+    }
+    
     formData.append("job_description", jobDescription || "");
 
     const response = await fetch(`${PYTHON_API_BASE_URL}/extract-keywords`, {

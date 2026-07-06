@@ -2,14 +2,14 @@ import express from "express";
 import userController from "../controllers/user_controller.js";
 import middleware from "../../../middleware/middleware.js";
 import schema from "../validations/recruiter_validations.js";
-
+    
 
 const router = express.Router();
 
 
 router.post('/fetch-jobs' , middleware.allowedRoles('user', 'recruiter', 'admin') , userController.fetchJobs);
 router.get('/fetch-single-job/:id' , middleware.allowedRoles('user', 'recruiter', 'admin') , userController.fetchJobById);
-router.post('/apply-job/:id' , middleware.allowedRoles('user') , middleware.resumeUploadMiddleware , userController.applyForJob);
+router.post('/apply-job/:id' , middleware.allowedRoles('user') , userController.applyForJob);
 router.get('/my-applications' , middleware.allowedRoles('user') , userController.myApplications);
 
 // ── Individual Dashboard Section APIs (reusable) ──

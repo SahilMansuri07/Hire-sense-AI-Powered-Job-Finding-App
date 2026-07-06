@@ -16,9 +16,7 @@ const authController = {
     },
 
     async uploadResume(req, res){
-            return middleware.resumeUploadMiddleware(req, res, () => {
-                return authModule.uploadResume(req, res);
-            })
+        return authModule.uploadResume(req, res);
     },
         
 
@@ -46,24 +44,22 @@ const authController = {
         try {
             const userId = req.loginUser?.id;
             if(!userId) {
-                return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "User_ID_not_found", null);
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_ID_not_found", null);
             }
             const profile = await authModule.getUserProfile(userId);
             if (!profile) {
-                return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "User_not_found", null);
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_not_found", null);
             }
-            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Profile fetched", profile);
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Profile_fetched", profile);
         } catch (error) {
             console.log("Error in getUserProfile controller: ", error);
-            return middleware.sendApiResponse(res, Codes.ERROR, Codes.RESPONSE_SUCCESS, "Internal_Server_Error", null);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
         }
     },
 
     async setUpPreferences(req, res){
         return middleware.tokenMiddleware(req, res, () => {
-            return middleware.resumeUploadMiddleware(req, res, () => {
-                return authModule.setUpPreferences(req, res);
-            });
+            return authModule.setUpPreferences(req, res);
         });
     },
 }

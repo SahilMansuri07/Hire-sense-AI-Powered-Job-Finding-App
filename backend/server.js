@@ -22,14 +22,14 @@ app.use(cors({
 }));
 
 // Middleware to extract language from headers
-// app.use(middleware.extractHeaderLanguage);
+app.use(middleware.extractHeaderLanguage);
 
 app.use("/uploads", express.static("uploads"));
 
 app.use(middleware.tokenMiddleware);
 // app.use(middleware.allowedRoles("user", "recruiter", "admin"));
 
-// app.use(middleware.checkApi);
+app.use(middleware.checkApi);
 
 app.use(middleware.decryption);
 

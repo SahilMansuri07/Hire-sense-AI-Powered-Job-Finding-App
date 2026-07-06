@@ -60,8 +60,8 @@ const userModule = {
             if (!userId) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "User_ID_not_found",
                     null
                 );
@@ -78,7 +78,7 @@ const userModule = {
                 res,
                 Codes.SUCCESS,
                 Codes.RESPONSE_SUCCESS,
-                "Jobs fetched successfully",
+                "Jobs_fetched_successfully",
                 {
                     jobs,
                     pagination: {
@@ -93,8 +93,8 @@ const userModule = {
             console.log("Error in fetchJobs: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -108,8 +108,8 @@ const userModule = {
             if (!jobId) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Job_ID_not_found",
                     null
                 );
@@ -123,8 +123,8 @@ const userModule = {
             if (!job) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Job_not_found",
                     null
                 );
@@ -134,15 +134,15 @@ const userModule = {
                 res,
                 Codes.SUCCESS,
                 Codes.RESPONSE_SUCCESS,
-                "Job fetched successfully",
+                "Job_fetched_successfully",
                 job
             );
         } catch (error) {
             console.log("Error in fetchJobById: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -151,24 +151,22 @@ const userModule = {
 
     applyForJob: async (req, res) => {
         try {
-            console.log("req.body: ", req.body);
             const userId = req.loginUser.id; 
-            const file = req.file || req.files?.resume?.[0] || req.files?.file?.[0] || null;
             const portfolioLink = req.body.portfolio_link || null;
-            const { fullName, email, phone, coverLetter, linkedIn } = req.body;
+            const { fullName, email, phone, coverLetter, linkedIn, resumeData } = req.body;
             const jobId = req.params.id || req.body.jobId;
             console.log("jobId: ", jobId);
-            if (!file) {
+            if (!resumeData || !resumeData.resumeUrl) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "File_required",
                     null
                 );
             }
 
-            const fileUrl = `/uploads/${file?.filename || ""}`;
+            const fileUrl = resumeData.resumeUrl;
             const job = await JobPost.findOne({ 
                 _id: jobId, 
                 is_active: { $ne: false }, 
@@ -178,8 +176,8 @@ const userModule = {
             if (!job) {
                 return middleware.sendApiResponse(
                     res,
-                    Codes.ERROR,
-                    Codes.RESPONSE_SUCCESS,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Job_not_found",
                     null
                 );
@@ -200,7 +198,7 @@ const userModule = {
       
             // Check if resume already exists → UPDATE instead of create
             try {
-                const pythonResult = await extractKeywordsFromPython(file, jobDescriptionText);
+                const pythonResult = await extractKeywordsFromPython(resumeData.resumeUrl, jobDescriptionText);
                 console.log("pythonResult: ", pythonResult);
                 if (pythonResult) {
                     keywordsValues = pythonResult;
@@ -235,8 +233,8 @@ const userModule = {
             console.log("Error in applyForJob: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -258,8 +256,8 @@ const userModule = {
             console.log("Error in myApplications: ", error);
             return middleware.sendApiResponse(
                 res,
-                Codes.ERROR,
-                Codes.RESPONSE_SUCCESS,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -321,7 +319,7 @@ const userModule = {
         } catch (error) {
             console.log("Error in resumeScore: ", error);
             return middleware.sendApiResponse(
-                res, Codes.ERROR, Codes.RESPONSE_SUCCESS,
+                res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR,
                 "Internal_Server_Error", null
             );
         }
@@ -365,7 +363,7 @@ const userModule = {
         } catch (error) {
             console.log("Error in appliedJobs: ", error);
             return middleware.sendApiResponse(
-                res, Codes.ERROR, Codes.RESPONSE_SUCCESS,
+                res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR,
                 "Internal_Server_Error", null
             );
         }
@@ -398,7 +396,7 @@ const userModule = {
         } catch (error) {
             console.log("Error in applicationStatus: ", error);
             return middleware.sendApiResponse(
-                res, Codes.ERROR, Codes.RESPONSE_SUCCESS,
+                res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR,
                 "Internal_Server_Error", null
             );
         }
@@ -415,7 +413,7 @@ const userModule = {
 
             if (!userId) {
                 return middleware.sendApiResponse(
-                    res, Codes.ERROR, Codes.RESPONSE_SUCCESS,
+                    res, Codes.SUCCESS, Codes.RESPONSE_ERROR,
                     "User_ID_not_found", null
                 );
             }
@@ -425,7 +423,7 @@ const userModule = {
 
             if (!user) {
                 return middleware.sendApiResponse(
-                    res, Codes.ERROR, Codes.RESPONSE_SUCCESS,
+                    res, Codes.SUCCESS, Codes.RESPONSE_ERROR,
                     "User_not_found", null
                 );
             }
@@ -475,7 +473,7 @@ const userModule = {
         } catch (error) {
             console.log("Error in dashBoard: ", error);
             return middleware.sendApiResponse(
-                res, Codes.ERROR, Codes.RESPONSE_SUCCESS,
+                res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR,
                 "Internal_Server_Error", null
             );
         }

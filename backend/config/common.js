@@ -1,12 +1,8 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import nodemailer from "nodemailer";
-import fs from "fs/promises";
 import UserDevice from "../models/UserDevice.js";
-import { extractPdfTextFromPython } from "../python_api/pythonService.js";
-import { profileupload, resumeupload } from "./multer.js";
 
-const PYTHON_API_BASE_URL = (process.env.PYTHON_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 const common = {
     async checkUniqueEmail(email) {

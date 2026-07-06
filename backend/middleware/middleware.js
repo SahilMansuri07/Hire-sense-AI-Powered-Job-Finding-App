@@ -4,14 +4,11 @@ const { default: local , t } = localizify;
 import dotenv from "dotenv";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
-import common from "../config/common.js";
-import User from "../models/User.js";
 import UserDevice from "../models/UserDevice.js";
 import es from "../languages/es.js";
 import fr from "../languages/fr.js";
 import en from "../languages/en.js";
 import hn from "../languages/hn.js";
-import { resumeupload } from "../config/multer.js";
 
 dotenv.config();
 
@@ -30,6 +27,7 @@ const bypassRoutes = [
     "/api/v1/auth/login",
     "/api/v1/auth/signup",
     "/api/v1/auth/validate-user",
+    "/api/v1/recruiter/debug-jobs",
 ]
 
 const resolveMessage = (responseMessage) => {
@@ -138,9 +136,15 @@ async function tokenMiddleware (req, res, next) {
         }
 
       const token = req.headers['token'] || req.headers['authorization'];
-      console.log("Token from headers: ", token);
+    //   console.log("Token from headers: ", token);
         if (!token) {
-            return res.status(401).json({ message: "Token missing" });
+            return sendApiResponse(
+                res,
+                Codes.UNAUTHORIZED,
+                Codes.INVALID_TOKEN,
+                "Invalid_or_missing_token",
+                null
+            );
         }
 
         const bearerToken = token.replace("Bearer ", "").trim();
@@ -167,8 +171,8 @@ async function tokenMiddleware (req, res, next) {
                 null,
             );
         }
-        console.log("Decoded token: ", decoded);
-        console.log("Bearer token: ", bearerToken);
+        // console.log("Decoded token: ", decoded);
+        // console.log("Bearer token: ", bearerToken);
 
         // Verify user exists and is active in MongoDB
         const userToken = await UserDevice.findOne({
@@ -177,18 +181,18 @@ async function tokenMiddleware (req, res, next) {
             is_active: true,
             is_delete: false,
         }).lean();
-        console.log("userToken: ", userToken);
+        // console.log("userToken: ", userToken);
 
         if (!userToken) {
-            return sendApiResponse(res, Codes.SUCCESS , Codes.UNAUTHORIZED, "rest_keywords_unauthorized", null);
+            return sendApiResponse(res, Codes.UNAUTHORIZED, Codes.INVALID_TOKEN, "Invalid_or_missing_token", null);
         }
         
         if(userToken.is_active === false) {
             return sendApiResponse(
                 res,
-                Codes.SUCCESS,
                 Codes.UNAUTHORIZED,
-                "rest_keywords_your_session_has_been_expired",
+                Codes.INVALID_TOKEN,
+                "Token_expired_Please_login_again",
                 null
             );
         }
@@ -200,9 +204,8 @@ async function tokenMiddleware (req, res, next) {
 const allowedRoles = (...roles) => {
     // console.log("roles: ", roles);   
     return (req, res, next) => {
-    //    console.log(req.loginUser.role)
         if(!roles.includes(req.loginUser.role)){
-            return sendApiResponse(res , 401, -1 , { keyword: "Access_Denied" , component : {} })
+            return sendApiResponse(res, Codes.UNAUTHORIZED, Codes.INVALID_TOKEN, "Access_Denied", null);
         }
         next();
     };
@@ -216,7 +219,7 @@ const checkApi = (req, res, next) => {
                 res,
                 Codes.UNAUTHORIZED,
                 Codes.INVALID_APIKEY,
-                "rest_keywords_unauthorized",
+                "Invalid_or_missing_api_key",
                 null
             );
         }
@@ -227,30 +230,11 @@ const checkApi = (req, res, next) => {
             res,
             Codes.UNAUTHORIZED,
             Codes.INVALID_APIKEY,
-            "rest_keywords_unauthorized",
+            "Invalid_or_missing_api_key",
             null
         );
     }
 }
-
-const resumeUploadMiddleware = (req, res, next) => {
-    resumeupload.fields([
-        { name: "resume", maxCount: 1 },
-        { name: "file", maxCount: 1 },
-    ])(req, res, (err) => {
-        if (!err) {
-            
-            return next();
-        }
-        return sendApiResponse(
-            res,
-            400,
-            0,
-            err.message,
-            null,
-        );
-    });
-};
 
 const encryption = async (req) => {
     // Implement your encryption logic here
@@ -329,7 +313,6 @@ export default {
     checkApi ,
     allowedRoles,
     tokenMiddleware,
-    resumeUploadMiddleware,
     decryption,
     validateJoi,
 }

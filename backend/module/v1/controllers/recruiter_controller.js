@@ -30,6 +30,16 @@ const recruiterController = {
     fetchRecruiterJobById: async (req, res) => {
         return recruiterModule.fetchRecruiterJobById(req, res);
     },
+
+    dashboardSummary: async (req, res) => {
+        return recruiterModule.dashboardSummary(req, res);
+    },
+    getCandidates: async (req, res) => {
+        return recruiterModule.getCandidates(req, res);
+    },
+    getCandidateProfile: async (req, res) => {
+        return recruiterModule.getCandidateProfile(req, res);
+    },
 };
 
 

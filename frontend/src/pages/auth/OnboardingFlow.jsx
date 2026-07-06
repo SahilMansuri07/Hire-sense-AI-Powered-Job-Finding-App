@@ -114,6 +114,10 @@ export function OnboardingFlow() {
   const handleResumeUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      toast.error("Only PDF files are allowed!");
+      return;
+    }
     setFormData(prev => ({ ...prev, resume: file }));
     toast.success("Resume attached!");
     setStep(2);
@@ -124,13 +128,40 @@ export function OnboardingFlow() {
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
-      if (formData.resume) {
+      if (formData.resume && formData.resume instanceof File) {
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+        
+        if (!cloudName || !uploadPreset) {
+          toast.error("Cloudinary configuration is missing in frontend .env");
+          setIsSubmitting(false);
+          return;
+        }
+
         const fd = new FormData();
         fd.append('file', formData.resume);
-        if (formData.jobRoleName) {
-          fd.append('job_description', formData.jobRoleName);
+        fd.append('upload_preset', uploadPreset);
+
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
+          method: 'POST',
+          body: fd
+        });
+        
+        const cloudData = await cloudRes.json();
+        if (!cloudRes.ok) {
+          throw new Error(cloudData.error?.message || "Failed to upload resume to Cloudinary");
         }
-        const res = await uploadResumeAPI(fd);
+
+        const payload = {
+          resumeUrl: cloudData.secure_url,
+          fileName: formData.resume.name,
+          fileSize: formData.resume.size,
+          fileType: formData.resume.type,
+          cloudinaryPublicId: cloudData.public_id,
+          job_description: formData.jobRoleName || ''
+        };
+
+        const res = await uploadResumeAPI(payload);
         if (res?.data) {
           authStorage.setResumeAnalysis(user?._id || 'unknown', res.data);
         }
@@ -198,8 +229,8 @@ export function OnboardingFlow() {
               <label className="block border-2 border-dashed border-white/20 rounded-2xl p-12 text-center hover:border-[#1f7af9]/50 transition-all cursor-pointer group">
                 <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400 group-hover:text-[#1f7af9] transition-colors" />
                 <p className="text-lg mb-2">{formData.resume ? formData.resume.name : "Click to upload or drag and drop"}</p>
-                <p className="text-sm text-gray-500">PDF, DOC, DOCX (Max 5MB)</p>
-                <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} disabled={isUploading} />
+                <p className="text-sm text-gray-500">PDF ONLY (Max 5MB)</p>
+                <input type="file" className="hidden" accept=".pdf,application/pdf" onChange={handleResumeUpload} disabled={isUploading} />
               </label>
               <div className="text-center mt-4">
                  <button onClick={() => setStep(2)} className="text-gray-400 hover:text-white underline">Skip for now</button>
