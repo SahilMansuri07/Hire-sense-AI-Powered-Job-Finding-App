@@ -23,6 +23,6 @@ router.get(`/candidates`, middleware.allowedRoles('recruiter'), recruiterControl
 
 router.get(`/candidates/:id`, middleware.allowedRoles('recruiter'), recruiterController.getCandidateProfile);
 
-// router.delete(`/delete-candidate`, middleware.allowedRoles('recruiter'), recruiterController.deleteCandidate);
+router.put(`/candidates/:id/status`, middleware.allowedRoles('recruiter'), recruiterController.updateApplicationStatus);
 
 export default router;

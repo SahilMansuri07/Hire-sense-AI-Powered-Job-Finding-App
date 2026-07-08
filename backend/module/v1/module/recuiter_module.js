@@ -301,6 +301,7 @@ const recruiterModule = {
             );
         }
     },
+
     fetchRecruiterJob : async (req, res) => {
         try {
             const page = req.body?.page || 1;
@@ -356,7 +357,6 @@ const recruiterModule = {
         }
     },
 
-
     fetchRecruiterJobById : async (req, res) => {
         try {
             const {jobId} = req.body;
@@ -395,6 +395,7 @@ const recruiterModule = {
             );
         }
     },
+
     viewApplication: async (req, res) => {
         try {
             const { jobId } = req.body;
@@ -487,16 +488,30 @@ const recruiterModule = {
             const limit = parseInt(req.query.limit) || 10;
             const skip = (page - 1) * limit;
 
+            const { status, sort, search } = req.query;
+
             const myJobs = await JobPost.find({ recruiterId, is_delete: { $ne: true } }).select('_id');
             const jobIds = myJobs.map(j => j._id);
 
             const filter = { jobId: { $in: jobIds }, is_delete: false };
 
+            if (status && status !== 'all') {
+                filter.status = status;
+            }
+            if (search) {
+                filter.fullName = { $regex: search, $options: 'i' };
+            }
+
+            let sortOptions = { created_at: -1 };
+            if (sort === 'asc') {
+                sortOptions = { created_at: 1 };
+            }
+
             const applicants = await JobApplicant.find(filter)
-                .sort({ created_at: -1 })
-                .skip(skip)
+                .sort(sortOptions)
+                .skip(skip) 
                 .limit(limit)
-                .populate('jobId', 'jobTitle')
+                .populate('jobId', 'jobTitle department employmentType location')
                 .lean();
 
             const total = await JobApplicant.countDocuments(filter);
@@ -506,6 +521,13 @@ const recruiterModule = {
                 id: app._id,
                 name: app.fullName || 'Unknown Candidate',
                 role: app.jobId?.jobTitle || 'Unknown Role',
+                department: app.jobId?.department || 'N/A',
+                employmentType: app.jobId?.employmentType || 'N/A',
+                location: app.jobId?.location || 'Remote',
+                email: app.email || 'N/A',
+                phone: app.phone || 'N/A',
+                status: app.status || 'applied',
+                matchScore: app.keywordsValues?.["JD Match"] || app.keywordsValues?.["Skill Match Score"] || 0,
                 avatar: '🧑‍💻', 
                 applicationDate: app.created_at,
             }));
@@ -526,7 +548,7 @@ const recruiterModule = {
             const recruiterId = req.loginUser.id;
 
             const applicant = await JobApplicant.findOne({ _id: id, is_delete: false })
-                .populate('jobId', 'jobTitle recruiterId')
+                .populate('jobId', 'jobTitle recruiterId department location employmentType expiriance_level salaryRange')
                 .lean();
 
             if (!applicant) {
@@ -544,9 +566,22 @@ const recruiterModule = {
                 name: applicant.fullName || 'Unknown Candidate',
                 title: applicant.jobId?.jobTitle || 'Unknown Role',
                 email: applicant.email || 'N/A',
+                phone: applicant.phone || 'N/A',
+                linkedIn: applicant.linkedIn || 'N/A',
+                status: applicant.status || 'applied',
                 location: resumeInfo?.parsedData?.personal_info?.location || 'N/A',
                 yearsOfExperience: resumeInfo?.parsedData?.total_experience_years || 'N/A',
                 appliedDate: applicant.created_at,
+                jobDetails: {
+                    jobId: applicant.jobId?._id,
+                    jobTitle: applicant.jobId?.jobTitle,
+                    department: applicant.jobId?.department,
+                    location: applicant.jobId?.location,
+                    employmentType: applicant.jobId?.employmentType,
+                    experienceLevel: applicant.jobId?.expiriance_level || 'N/A',
+                    salaryRange: applicant.jobId?.salaryRange
+                },
+                matchMetrics: applicant.keywordsValues || {},
                 resume: resumeInfo ? {
                     fileName: resumeInfo.fileName || 'resume.pdf',
                     fileType: "PDF",
@@ -576,9 +611,43 @@ const recruiterModule = {
         } catch (error) {
             console.log("Error in getCandidateProfile: ", error);
             return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
+        }   
+    },
+    
+    updateApplicationStatus: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
+            const recruiterId = req.loginUser.id;
+
+            const applicant = await JobApplicant.findOne({ _id: id, is_delete: false }).populate('jobId');
+            if (!applicant) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Candidate_not_found", null);
+            }
+            if (applicant.jobId?.recruiterId?.toString() !== recruiterId.toString()) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Unauthorized", null);
+            }
+
+            applicant.status = status;
+            await applicant.save();
+
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Application_status_updated", applicant);
+        } catch (error) {
+            console.log("Error in updateApplicationStatus: ", error);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
         }
     }
-
+    
+    // ListApplication: async (req ,res) => {
+        //     try {
+    //         const {jobId} = req.body;
+    //         const applicants = await JobApplicant.find({jobId,is_delete:{$ne:true}}).populate("userId", "fullName email");
+    //         return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Applications_fetched_successfully", applicants);
+    //     } catch (error) {
+    //         console.log("Error in ListApplication: ", error);
+    //         return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
+    //     }   
+    // },
     
 }
 

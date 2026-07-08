@@ -24,6 +24,10 @@ const jobApplicantSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    matchedScore: {
+      type: Number,
+      default: 0,
+    },
     portfolioLink: {
       type: String,
       default: null,
@@ -51,7 +55,7 @@ const jobApplicantSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["applied", "rejected", "Accepted"],
+      enum: ["applied", "rejected", "Accepted", "shortlisted"],
       default: "applied",
       index: true,
     },

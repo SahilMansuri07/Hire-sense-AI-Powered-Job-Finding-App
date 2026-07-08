@@ -16,25 +16,24 @@ async function readUploadBuffer(file) {
 
 export async function extractPdfTextFromPython(fileOrUrl, job_description) {
   try {
-    const formData = new FormData();
+    const payload = {
+      job_description: job_description || ""
+    };
     
     if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
-      formData.append("resume_url", fileOrUrl);
+      payload.resume_url = fileOrUrl;
     } else {
-      const fileBuffer = await readUploadBuffer(fileOrUrl);
-      if (!fileBuffer) return null;
-      const resumeBlob = new Blob([fileBuffer], { type: fileOrUrl.mimetype || "application/pdf" });
-      formData.append("resume", resumeBlob, fileOrUrl.originalname || "resume.pdf");
+      console.warn("File buffer sent to JSON payload is not fully supported yet in this implementation.");
+      return null;
     }
-    
-    formData.append("job_description", job_description || "");
 
     const response = await fetch(`${PYTHON_API_BASE_URL}/analyze`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: formData,
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -70,25 +69,24 @@ export async function getAiJobDescription(payload) {
 
 export async function extractKeywordsFromPython(fileOrUrl, jobDescription = "") {
   try {
-    const formData = new FormData();
+    const payload = {
+      job_description: jobDescription || ""
+    };
     
     if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
-      formData.append("resume_url", fileOrUrl);
+      payload.resume_url = fileOrUrl;
     } else {
-      const fileBuffer = await readUploadBuffer(fileOrUrl);
-      if (!fileBuffer) return null;
-      const resumeBlob = new Blob([fileBuffer], { type: fileOrUrl.mimetype || "application/pdf" });
-      formData.append("resume", resumeBlob, fileOrUrl.originalname || "resume.pdf");
+      console.warn("File buffer sent to JSON payload is not fully supported yet in this implementation.");
+      return null;
     }
-    
-    formData.append("job_description", jobDescription || "");
 
     const response = await fetch(`${PYTHON_API_BASE_URL}/extract-keywords`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: formData,
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {

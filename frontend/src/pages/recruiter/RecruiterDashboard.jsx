@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { 
   Clock, Plus, TrendingUp, MapPin, 
-  Briefcase, Calendar, ChevronRight, FileText
+  Briefcase, Calendar, ChevronRight, FileText, Star, Building2
 } from 'lucide-react';
 import { getDashboardSummary, getCandidatesPreview } from '../../redux/slices/candidatesSlice';
 
@@ -97,30 +97,45 @@ export function RecruiterDashboard() {
         {/* Candidates */}
         <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl flex-1">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold">Candidates</h3>
-            <button onClick={() => navigate('/recruiter/pipeline')} className="text-sm font-medium text-[#1f7af9] hover:text-[#bc13fe] transition-colors flex items-center">
+            <h3 className="text-xl font-bold">Recent Applications</h3>
+            <button onClick={() => navigate('/recruiter/applications')} className="text-sm font-medium text-[#1f7af9] hover:text-[#bc13fe] transition-colors flex items-center">
               View All <ChevronRight className="w-4 h-4 ml-1" />
             </button>
           </div>
           <div className="space-y-4">
-            {previewList?.length === 0 && !loading && <p className="text-gray-400">No recent candidates found.</p>}
+            {previewList?.length === 0 && !loading && <p className="text-gray-400">No recent applications found.</p>}
             {previewList?.map((candidate, idx) => (
-              <div key={candidate.id || idx} onClick={() => navigate(`/recruiter/candidate/${candidate.id}`)} className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-[#1f7af9]/30 hover:bg-white/10 transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-14 h-14 bg-gradient-to-br from-[#1f7af9]/20 to-[#bc13fe]/20 rounded-xl flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
+              <div key={candidate.id || idx} onClick={() => navigate(`/recruiter/application/${candidate.id}`)} className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-[#1f7af9]/30 hover:bg-white/10 transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-start sm:items-center gap-4 flex-1">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#1f7af9]/20 to-[#bc13fe]/20 rounded-xl flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shrink-0">
                     {candidate.avatar}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h4 className="text-lg font-bold text-white group-hover:text-[#1f7af9] transition-colors">{candidate.name}</h4>
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-white/10 text-white rounded uppercase tracking-wider">
+                        {candidate.status}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-400">{candidate.role}</p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400">
+                      <span className="flex items-center gap-1"><Briefcase className="w-3.5 h-3.5" /> {candidate.role}</span>
+                      {candidate.department && candidate.department !== 'N/A' && (
+                        <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" /> {candidate.department}</span>
+                      )}
+                      {candidate.location && candidate.location !== 'N/A' && (
+                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {candidate.location}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-auto border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0 mt-2 sm:mt-0">
-                  <button className="px-5 py-2.5 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium text-sm transition-colors border border-white/5">
-                    View Profile
+                <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 sm:w-auto border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0 mt-2 sm:mt-0">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#10b981]/10 border border-[#10b981]/30 rounded-lg">
+                    <Star className="w-4 h-4 text-[#10b981] fill-current" />
+                    <span className="text-[#10b981] font-bold">{candidate.matchScore || 0}% Match</span>
+                  </div>
+                  <button className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium text-sm transition-colors border border-white/5 shrink-0">
+                    View
                   </button>
                 </div>
               </div>

@@ -2,10 +2,8 @@
 import userModule from "../module/user_module.js";
     
 const userController = {
-    fetchJobs: async (req, res) => {
-        // console.log("userController fetchJobs");
-        
-        return userModule.fetchJobs(req, res);
+    fetchJobs: async (req, res) => {     
+       return userModule.fetchJobs(req, res);
     },
 
     fetchJobById: async (req, res) => {

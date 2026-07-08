@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Upload, FileText, ArrowLeft } from 'lucide-react';
 import { uploadResumeAPI } from '../../api/api';
+import { ATSResultDetails } from './ATSResultDetails';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
 import { authStorage } from '../../utils/authStorage';
@@ -11,6 +12,7 @@ export function ATSAnalyzer() {
   const [uploading, setUploading] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState(null);
+  const [analysisData, setAnalysisData] = useState(null);
   const { user } = useSelector(state => state.auth);
 
   const handleUpload = async () => {
@@ -47,20 +49,21 @@ export function ATSAnalyzer() {
       }
 
       const payload = {
-        resumeUrl: cloudData.secure_url,
+        resume_url: cloudData.secure_url || cloudData.url,
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
         cloudinaryPublicId: cloudData.public_id,
         job_description: jobDescription
       };
+      console.log(payload)
 
       const res = await uploadResumeAPI(payload);
       if (res?.data) {
         authStorage.setResumeAnalysis(user?._id || 'unknown', res.data);
+        setAnalysisData(res.data);
       }
       toast.success("Resume analyzed successfully!");
-      navigate('/candidate/dashboard');
     } catch (err) {
       toast.error(err?.message || "Analysis failed");
     } finally {
@@ -70,6 +73,12 @@ export function ATSAnalyzer() {
 
   return (
   <div className="min-h-screen bg-[#0f1723] text-white p-6">
+      {analysisData && (
+        <ATSResultDetails 
+          parsedData={analysisData} 
+          onClose={() => setAnalysisData(null)} 
+        />
+      )}
       <div className="max-w-6xl mx-auto">
         <button onClick={() => navigate('/candidate/dashboard')} className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />

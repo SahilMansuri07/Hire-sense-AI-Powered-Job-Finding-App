@@ -26,7 +26,7 @@ export function RecruiterLayout() {
     { name: 'Jobs', icon: Briefcase, path: '/recruiter/jobs' },
     { name: 'Post Job', icon: Plus, path: '/recruiter/post-job' },
     { name: 'Analytics', icon: BarChart2, path: '/analytics' },
-    { name: 'Candidates', icon: Users, path: '/recruiter/candidates' },
+    { name: 'Application', icon: Users, path: '/recruiter/applications' },
     { name: 'Settings', icon: Settings, path: '/settings' },
     { name: 'Notifications', icon: Bell, path: '/notifications' }
   ];

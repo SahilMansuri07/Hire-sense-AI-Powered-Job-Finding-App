@@ -40,6 +40,14 @@ const recruiterController = {
     getCandidateProfile: async (req, res) => {
         return recruiterModule.getCandidateProfile(req, res);
     },
+
+    updateJobStatus: async (req , res) => {
+        return recruiterModule.updateJobStatus(req, res);
+    },
+
+    updateApplicationStatus: async (req , res) => {
+        return recruiterModule.updateApplicationStatus(req, res);
+    }
 };
 
 

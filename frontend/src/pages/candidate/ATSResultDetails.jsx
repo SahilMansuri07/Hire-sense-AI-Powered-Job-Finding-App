@@ -4,34 +4,44 @@ import { CheckCircle2, XCircle, AlertTriangle, TrendingUp, Award, Target, Briefc
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts';
 
 export function ATSResultDetails({ parsedData, onClose }) {
-  // Parsing logic with fallbacks to ensure dummy data shows up perfectly if backend omits it
-  const jdMatchStr = parsedData["JD Match"] || parsedData["jd_match"] || parsedData["ats_score"] || "85%";
-  const atsScore = typeof jdMatchStr === 'number' ? jdMatchStr : parseInt(String(jdMatchStr).replace('%', ''), 10) || 85;
-  
-  const matchedSkills = parsedData["Matched Skills"] || parsedData["matched_skills"] || parsedData.matchedSkills || ["React.js", "Node.js", "Express.js", "MySQL", "REST API", "Git", "GitHub"];
-  const missingSkills = parsedData.MissingSkills || parsedData["missing_skills"] || parsedData.missingSkills || ["Automated Testing", "Cloud Infrastructure Management"];
-  
-  const skillMatchScore = Math.round((matchedSkills.length / (matchedSkills.length + missingSkills.length || 1)) * 100);
-  
-  const experienceLvl = parsedData.Experience || parsedData.experience || "Junior";
-  const experienceYears = parsedData.YearsOfExperience || parsedData.years_of_experience || "1 Year";
-  const experienceMatchScore = parsedData.ExperienceMatch || parsedData.experience_match || 75;
-  
-  const strengths = parsedData.Strengths || parsedData.strengths || [
-    "Strong technical skills in frontend and backend development", 
-    "Experience with modern frameworks and libraries"
-  ];
-  const weaknesses = parsedData.Weaknesses || parsedData.weaknesses || [
-    "Limited experience in automated testing", 
-    "No experience in cloud infrastructure management"
-  ];
-  const suggestions = parsedData.Suggestions || parsedData.suggestions || [
-    "Gain experience in automated testing frameworks", 
-    "Familiarize with cloud services and deployment processes"
-  ];
+  console.log(parsedData)
 
-  const summary = parsedData.Summary || parsedData["Profile Summary"] || parsedData.summary || 
-    "Your resume demonstrates solid full-stack development skills and aligns well with the provided Job Description. Strengthening your knowledge of automated testing and cloud technologies will significantly improve your ATS score and increase your chances of shortlisting.";
+  const actualData = parsedData?.data || parsedData;
+
+  const jdMatchStr = actualData?.["JD Match"] || actualData?.["jd_match"] || actualData?.["ats_score"];
+  const matchedSkills = actualData?.["Skills Analysis"]?.["Matched Skills"] || actualData?.["Matched Skills"] || actualData?.["matched_skills"] || actualData?.matchedSkills;
+
+  if (!jdMatchStr && !matchedSkills) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#0f1723] text-white flex items-center justify-center p-6">
+        <div className="p-8 bg-white/5 backdrop-blur border border-white/10 rounded-3xl text-center max-w-md w-full">
+          <AlertTriangle className="w-16 h-16 text-[#f59e0b] mx-auto mb-6" />
+          <h2 className="text-2xl font-bold mb-4">No Data Extracted</h2>
+          <p className="text-gray-400 mb-8">We could not extract meaningful data from this resume. Please analyze a new one.</p>
+          <button onClick={onClose} className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all">
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const atsScore = typeof jdMatchStr === 'number' ? jdMatchStr : parseInt(String(jdMatchStr).replace('%', ''), 10) || 0;
+  const missingSkills = actualData?.["Skills Analysis"]?.["Missing Skills"] || actualData?.MissingSkills || actualData?.["missing_skills"] || actualData?.missingSkills || [];
+  
+  const skillMatchScoreRaw = actualData?.["Skills Analysis"]?.["Skill Match Score"];
+  const skillMatchScore = typeof skillMatchScoreRaw === 'number' ? skillMatchScoreRaw : Math.round(((matchedSkills?.length || 0) / ((matchedSkills?.length || 0) + (missingSkills?.length || 1))) * 100);
+  
+  const experienceLvl = actualData?.["Experience Analysis"]?.["Experience Level"] || actualData?.Experience || actualData?.experience || "N/A";
+  const experienceYears = actualData?.["Experience Analysis"]?.["Years of Experience"] || actualData?.YearsOfExperience || actualData?.years_of_experience || "0";
+  const experienceMatchScore = actualData?.["Experience Analysis"]?.["Experience Match Score"] || actualData?.ExperienceMatch || actualData?.experience_match || 0;
+  
+  const strengths = actualData?.Strengths || actualData?.strengths || [];
+  const weaknesses = actualData?.Weaknesses || actualData?.weaknesses || [];
+  const suggestions = actualData?.["Improvement Suggestions"] || actualData?.Suggestions || actualData?.suggestions || [];
+
+  const summary = actualData?.["Experience Analysis"]?.["Relevant Experience Summary"] || actualData?.Summary || actualData?.["Profile Summary"] || actualData?.summary || 
+    "Analysis completed. Please review the detailed metrics below.";
 
   const scoreData = [{ name: 'Score', value: atsScore, fill: atsScore >= 80 ? '#10b981' : atsScore >= 60 ? '#f59e0b' : '#ef4444' }];
 
@@ -134,30 +144,32 @@ export function ATSResultDetails({ parsedData, onClose }) {
               <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
                 <div className="flex items-center gap-3 mb-6">
                   <h4 className="font-semibold text-lg text-white">Matched Skills</h4>
-                  <span className="px-3 py-1 bg-[#10b981]/20 text-[#10b981] text-xs font-bold rounded-full">{matchedSkills.length}</span>
+                  <span className="px-3 py-1 bg-[#10b981]/20 text-[#10b981] text-xs font-bold rounded-full">{matchedSkills?.length || 0}</span>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {matchedSkills.map((skill, i) => (
+                  {matchedSkills?.map((skill, i) => (
                     <span key={i} className="px-4 py-2 bg-[#10b981]/10 border border-[#10b981]/30 text-[#10b981] rounded-xl text-sm font-medium flex items-center gap-2 hover:bg-[#10b981]/20 transition-colors cursor-default">
                       <CheckCircle2 className="w-4 h-4" />
                       {skill}
                     </span>
                   ))}
+                  {(!matchedSkills || matchedSkills.length === 0) && <span className="text-gray-400 text-sm">No matched skills found.</span>}
                 </div>
               </div>
               
               <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
                 <div className="flex items-center gap-3 mb-6">
                   <h4 className="font-semibold text-lg text-white">Missing Skills</h4>
-                  <span className="px-3 py-1 bg-[#ef4444]/20 text-[#ef4444] text-xs font-bold rounded-full">{missingSkills.length}</span>
+                  <span className="px-3 py-1 bg-[#ef4444]/20 text-[#ef4444] text-xs font-bold rounded-full">{missingSkills?.length || 0}</span>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {missingSkills.map((skill, i) => (
+                  {missingSkills?.map((skill, i) => (
                     <span key={i} className="px-4 py-2 bg-[#ef4444]/10 border border-[#ef4444]/30 text-[#ef4444] rounded-xl text-sm font-medium flex items-center gap-2 hover:bg-[#ef4444]/20 transition-colors cursor-default">
                       <XCircle className="w-4 h-4" />
                       {skill}
                     </span>
                   ))}
+                  {(!missingSkills || missingSkills.length === 0) && <span className="text-gray-400 text-sm">No missing skills identified.</span>}
                 </div>
               </div>
             </div>
@@ -171,15 +183,16 @@ export function ATSResultDetails({ parsedData, onClose }) {
             <div className="flex items-center gap-3 mb-6">
               <Award className="w-7 h-7 text-[#10b981]" />
               <h3 className="text-xl font-bold">Strengths</h3>
-              <span className="px-2.5 py-1 bg-[#10b981]/20 text-[#10b981] text-xs font-bold rounded-full ml-auto">{strengths.length}</span>
+              <span className="px-2.5 py-1 bg-[#10b981]/20 text-[#10b981] text-xs font-bold rounded-full ml-auto">{strengths?.length || 0}</span>
             </div>
             <div className="space-y-4">
-              {strengths.map((str, i) => (
+              {strengths?.map((str, i) => (
                 <div key={i} className="flex gap-4 p-4 bg-[#10b981]/5 border border-[#10b981]/20 rounded-2xl hover:bg-[#10b981]/10 transition-colors">
                   <CheckCircle2 className="w-6 h-6 text-[#10b981] flex-shrink-0" />
                   <p className="text-sm text-gray-200 leading-relaxed">{str}</p>
                 </div>
               ))}
+              {(!strengths || strengths.length === 0) && <span className="text-gray-400 text-sm">No strengths identified.</span>}
             </div>
           </div>
 
@@ -187,15 +200,16 @@ export function ATSResultDetails({ parsedData, onClose }) {
             <div className="flex items-center gap-3 mb-6">
               <AlertTriangle className="w-7 h-7 text-[#f59e0b]" />
               <h3 className="text-xl font-bold">Weaknesses</h3>
-              <span className="px-2.5 py-1 bg-[#f59e0b]/20 text-[#f59e0b] text-xs font-bold rounded-full ml-auto">{weaknesses.length}</span>
+              <span className="px-2.5 py-1 bg-[#f59e0b]/20 text-[#f59e0b] text-xs font-bold rounded-full ml-auto">{weaknesses?.length || 0}</span>
             </div>
             <div className="space-y-4">
-              {weaknesses.map((weak, i) => (
+              {weaknesses?.map((weak, i) => (
                 <div key={i} className="flex gap-4 p-4 bg-[#f59e0b]/5 border border-[#f59e0b]/20 rounded-2xl hover:bg-[#f59e0b]/10 transition-colors">
                   <AlertTriangle className="w-6 h-6 text-[#f59e0b] flex-shrink-0" />
                   <p className="text-sm text-gray-200 leading-relaxed">{weak}</p>
                 </div>
               ))}
+              {(!weaknesses || weaknesses.length === 0) && <span className="text-gray-400 text-sm">No weaknesses identified.</span>}
             </div>
           </div>
         </motion.div>
@@ -204,7 +218,7 @@ export function ATSResultDetails({ parsedData, onClose }) {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="p-8 bg-white/5 backdrop-blur border border-white/10 rounded-3xl mb-6 hover:border-white/20 transition-colors">
           <h3 className="text-2xl font-bold mb-8">Improvement Suggestions</h3>
           <div className="grid md:grid-cols-2 gap-5">
-            {suggestions.map((sug, i) => (
+            {suggestions?.map((sug, i) => (
               <div key={i} className="flex items-start gap-4 p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1f7af9]/20 to-[#bc13fe]/20 flex items-center justify-center flex-shrink-0 text-white font-bold text-lg shadow-inner">
                   📌
@@ -212,6 +226,7 @@ export function ATSResultDetails({ parsedData, onClose }) {
                 <p className="text-sm text-gray-300 leading-relaxed pt-1">{sug}</p>
               </div>
             ))}
+            {(!suggestions || suggestions.length === 0) && <span className="text-gray-400 text-sm col-span-2">No suggestions available.</span>}
           </div>
         </motion.div>
 

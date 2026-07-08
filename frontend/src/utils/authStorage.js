@@ -63,6 +63,7 @@ export const authStorage = {
 
   getResumeAnalysis(userId) {
     if (!userId) return null;
+    console.log(userId)
     try {
       return JSON.parse(localStorage.getItem(`resume_analysis_${userId}`));
     } catch {

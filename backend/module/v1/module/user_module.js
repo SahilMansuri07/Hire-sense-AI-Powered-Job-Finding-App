@@ -21,9 +21,8 @@ const buildFilter = (body = {}) => {
         filter.employmentType = body.job_type;
     }
 
-    // JobPost doesn't have an experienceLevel field, it's usually inferred from jobTitle
     if (body.experience_level) {
-        filter.jobTitle = { $regex: body.experience_level, $options: "i" };
+        filter.expiriance_level = body.experience_level;
     }
 
     if (body.min_salary) {

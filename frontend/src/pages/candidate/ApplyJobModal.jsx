@@ -100,6 +100,7 @@ export function ApplyJobModal({
           portfolio: ''
         });
       }, 3000);
+
     } catch (err) {
       const toast = (await import('react-hot-toast')).default;
       toast.error(err?.message || "Application failed");

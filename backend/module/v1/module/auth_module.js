@@ -319,10 +319,10 @@ const authModule = {
                 );
             }
           
-            console.log("uploadResume - req.body:", req.body);
-            const { resumeUrl, fileName, fileSize, fileType, job_description, cloudinaryPublicId } = req.body || {};
-            
-            if (!resumeUrl || !resumeUrl.startsWith('http')) {
+            // console.log("uploadResume - req.body:", req.body);
+            const { resume_url, fileName, fileSize, fileType, job_description, cloudinaryPublicId } = req.body || {};
+            console.log(resume_url)
+            if (!resume_url) {
                 return middleware.sendApiResponse(
                     res,
                     Codes.SUCCESS,
@@ -342,7 +342,7 @@ const authModule = {
                 );
             }
 
-            const fileUrl = resumeUrl;
+            const fileUrl = resume_url;
             const safeFileName = fileName || 'resume.pdf';
             
             // Check if a resume with same userId + fileName exists → UPDATE instead of create
@@ -378,9 +378,11 @@ const authModule = {
             }
             
             let pyResponse = null;
-            
+            console.log("job_description",job_description);
+            console.log("fileUrl"   ,   fileUrl);
             try {
                const pythonResult = await extractPdfTextFromPython(fileUrl, job_description);    
+               
                 if(pythonResult){
                     pyResponse = pythonResult;
 

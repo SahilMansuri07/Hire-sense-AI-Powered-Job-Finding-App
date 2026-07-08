@@ -60,6 +60,11 @@ const authValidation = {
 
     uploadResumeSchema: Joi.object({
         job_description: Joi.string().max(5000).optional(),
+        resumeUrl: Joi.string().uri().required(),
+        fileName: Joi.string().optional(),
+        fileSize: Joi.number().optional(),
+        fileType: Joi.string().optional(),
+        cloudinaryPublicId: Joi.string().optional(),
     }),
 
     setUpPreferencesSchema: Joi.object({

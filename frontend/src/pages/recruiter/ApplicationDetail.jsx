@@ -1,16 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Mail, MapPin, Briefcase, Calendar, FileText, Star, MessageSquare, Download } from 'lucide-react';
-import { fetchCandidateProfileAPI } from '../../api/recruiterJobsApi';
+import { ArrowLeft, Mail, MapPin, Briefcase, Calendar, FileText, Star, MessageSquare, Download, Phone, CheckCircle2 } from 'lucide-react';
+import { fetchCandidateProfileAPI, updateCandidateStatusAPI } from '../../api/recruiterJobsApi';
 import { formatDistanceToNow, format } from 'date-fns';
 
-export function CandidateProfileRecruiter() {
+export function ApplicationDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updating, setUpdating] = useState(false);
+
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      setUpdating(true);
+      const response = await updateCandidateStatusAPI(id, newStatus);
+      if (response?.data) {
+        setProfile(prev => ({ ...prev, status: newStatus }));
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to update status");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   useEffect(() => {
     const getProfile = async () => {
@@ -69,19 +85,28 @@ export function CandidateProfileRecruiter() {
             <div className="flex-1">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
+                  <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                    {profile.name}
+                    <span className="px-3 py-1 text-xs font-semibold bg-white/10 text-white rounded-full border border-white/20 uppercase">
+                      {profile.status}
+                    </span>
+                  </h1>
                   <p className="text-xl text-gray-400 mb-4">{profile.title}</p>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                     <div className="flex items-center gap-2 text-gray-400">
                       <Mail className="w-4 h-4" />
                       {profile.email}
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
-                      <MapPin className="w-4 h-4" />
+                      <MapPin className="w-4 h-4 text-gray-500" />
                       {profile.location}
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
-                      <Briefcase className="w-4 h-4" />
+                      <Phone className="w-4 h-4 text-gray-500" />
+                      {profile.phone || 'N/A'}
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Briefcase className="w-4 h-4 text-gray-500" />
                       {profile.yearsOfExperience} years experience
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
@@ -93,10 +118,19 @@ export function CandidateProfileRecruiter() {
               </div>
               <div className="flex gap-3">
                 <button 
-                  className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
+                  onClick={() => handleStatusUpdate('shortlisted')}
+                  disabled={updating || profile.status === 'shortlisted'}
+                  className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 ${profile.status === 'shortlisted' ? 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30 cursor-not-allowed' : 'bg-white/5 border border-white/10 hover:bg-[#10b981]/10 hover:text-[#10b981] hover:border-[#10b981]/30'}`}
                 >
                   <Star className="w-5 h-5" />
-                  Shortlist
+                  {profile.status === 'shortlisted' ? 'Shortlisted' : 'Shortlist'}
+                </button>
+                <button 
+                  onClick={() => handleStatusUpdate('rejected')}
+                  disabled={updating || profile.status === 'rejected'}
+                  className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 ${profile.status === 'rejected' ? 'bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/30 cursor-not-allowed' : 'bg-white/5 border border-white/10 hover:bg-[#ef4444]/10 hover:text-[#ef4444] hover:border-[#ef4444]/30'}`}
+                >
+                  {profile.status === 'rejected' ? 'Rejected' : 'Reject'}
                 </button>
                 <button 
                   disabled
@@ -117,6 +151,88 @@ export function CandidateProfileRecruiter() {
             </div>
           </div>
         </div>
+
+        {/* Job Details Section */}
+        {profile.jobDetails && (
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl mb-6">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-[#bc13fe]" />
+              Applied Position Details
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-1">Role</p>
+                <p className="font-semibold text-sm">{profile.jobDetails.jobTitle || 'N/A'}</p>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-1">Department</p>
+                <p className="font-semibold text-sm">{profile.jobDetails.department || 'N/A'}</p>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-1">Experience required</p>
+                <p className="font-semibold text-sm">{profile.jobDetails.experienceLevel || 'N/A'}</p>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-1">Salary Range</p>
+                <p className="font-semibold text-sm text-[#10b981]">
+                  {profile.jobDetails.salaryRange?.min ? `$${profile.jobDetails.salaryRange.min.toLocaleString()}` : ''}
+                  {profile.jobDetails.salaryRange?.max ? ` - $${profile.jobDetails.salaryRange.max.toLocaleString()}` : ''}
+                  {!profile.jobDetails.salaryRange?.min && !profile.jobDetails.salaryRange?.max && 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Match Metrics Section */}
+        {profile.matchMetrics && Object.keys(profile.matchMetrics).length > 0 && (
+          <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Star className="w-5 h-5 text-[#f59e0b]" />
+                ATS Match Analysis
+              </h3>
+              <div className="px-4 py-2 bg-gradient-to-r from-[#10b981]/20 to-[#10b981]/5 border border-[#10b981]/50 rounded-lg flex items-center gap-2">
+                 <span className="text-sm text-gray-400">Overall Match</span>
+                 <span className="text-xl font-bold text-[#10b981]">{profile.matchMetrics.match_score || profile.matchMetrics["JD Match"] || profile.matchMetrics.skill_match_score || 0}%</span>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-5 bg-[#10b981]/5 rounded-2xl border border-[#10b981]/20">
+                <h4 className="text-sm font-semibold text-[#10b981] uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> Matched Keywords
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {(profile.matchMetrics.matched_keywords || profile.matchMetrics["Matched Keywords"] || []).map((kw, i) => (
+                    <span key={i} className="px-3 py-1.5 bg-[#10b981]/10 text-[#10b981] rounded-lg text-sm border border-[#10b981]/20">
+                      {kw}
+                    </span>
+                  ))}
+                  {!(profile.matchMetrics.matched_keywords || profile.matchMetrics["Matched Keywords"])?.length && (
+                    <span className="text-sm text-gray-500">No matched keywords found</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-5 bg-[#ef4444]/5 rounded-2xl border border-[#ef4444]/20">
+                <h4 className="text-sm font-semibold text-[#ef4444] uppercase tracking-wider mb-4 flex items-center gap-2">
+                   Missing Keywords
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {(profile.matchMetrics.missing_keywords || profile.matchMetrics["Missing Keywords"] || []).map((kw, i) => (
+                    <span key={i} className="px-3 py-1.5 bg-[#ef4444]/10 text-[#ef4444] rounded-lg text-sm border border-[#ef4444]/20 line-through decoration-[#ef4444]/50">
+                      {kw}
+                    </span>
+                  ))}
+                  {!(profile.matchMetrics.missing_keywords || profile.matchMetrics["Missing Keywords"])?.length && (
+                    <span className="text-sm text-gray-500">No missing keywords found</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Resume & Documents */}
         <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl mb-6">

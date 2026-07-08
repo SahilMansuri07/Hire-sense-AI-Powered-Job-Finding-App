@@ -12,7 +12,7 @@ router.post("/signup", middleware.validateJoi(authValidation.signupSchema), auth
 
 router.post("/login", middleware.validateJoi(authValidation.loginSchema), authController.login);
 
-router.post("/upload-resume" , authController.uploadResume);
+router.post("/upload-resume" , middleware.tokenMiddleware, authController.uploadResume);
 
 router.get("/skills" , authController.skillsListing);
 router.get("/job-roles" , authController.jobRolesListing);

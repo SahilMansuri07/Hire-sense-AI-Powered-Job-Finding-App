@@ -36,6 +36,7 @@ export function CandidateDashboard() {
       let localData = {};
       try {
         const stored = authStorage.getResumeAnalysis(user?._id || 'unknown');
+        console.log("stored", stored)
         if (stored) {
           localData = stored;
         }

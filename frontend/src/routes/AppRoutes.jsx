@@ -24,7 +24,8 @@ const MyApplications = lazy(() => import("../pages/candidate/MyApplications").th
 const HRInterview = lazy(() => import("../pages/candidate/HRInterview").then(m => ({ default: m.HRInterview })));
 
 const RecruiterDashboard = lazy(() => import("../pages/recruiter/RecruiterDashboard").then(m => ({ default: m.RecruiterDashboard })));
-const CandidateProfileRecruiter = lazy(() => import("../pages/recruiter/CandidateProfileRecruiter").then(m => ({ default: m.CandidateProfileRecruiter })));
+const ApplicationDetail = lazy(() => import("../pages/recruiter/ApplicationDetail").then(m => ({ default: m.ApplicationDetail })));
+const ApplicationsList = lazy(() => import("../pages/recruiter/ApplicationsList").then(m => ({ default: m.ApplicationsList })));
 const JobPostingCreator = lazy(() => import("../pages/recruiter/JobPostingCreator").then(m => ({ default: m.JobPostingCreator })));
 const RecruiterJobsPage = lazy(() => import("../pages/recruiter/RecruiterJobsPage").then(m => ({ default: m.RecruiterJobsPage })));
 const InterviewScheduler = lazy(() => import("../pages/recruiter/InterviewScheduler").then(m => ({ default: m.InterviewScheduler })));
@@ -70,8 +71,8 @@ export const router = createBrowserRouter(
       {/* ── Recruiter ── */}
       <Route path="/recruiter" element={<ProtectedRoute role="recruiter"><RecruiterLayout /></ProtectedRoute>}>
         <Route path="dashboard" element={<RecruiterDashboard />} />
-        <Route path="candidates" element={<EmptyState />} />
-        <Route path="candidate/:id" element={<CandidateProfileRecruiter />} />
+        <Route path="applications" element={<ApplicationsList />} />
+        <Route path="application/:id" element={<ApplicationDetail />} />
         <Route path="jobs" element={<RecruiterJobsPage />} />
         <Route path="post-job" element={<JobPostingCreator />} />
         <Route path="edit-job/:id" element={<JobPostingCreator />} />

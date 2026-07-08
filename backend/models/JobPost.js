@@ -23,6 +23,12 @@ const jobPostSchema = new mongoose.Schema(
       required: true,
     },
 
+    expiriance_level :{
+      type: String,
+      enum: ["Entry-level", "Junior", "Mid-level", "Senior-level", "Lead", "Principal", "Other"],
+      default: "Entry-level",
+    },
+
     location: {
       type: String,
       default: null,

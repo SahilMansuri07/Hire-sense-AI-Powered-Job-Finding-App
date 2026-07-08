@@ -3,32 +3,45 @@ from common.common import extract_pdf_text, prepare_prompt, prepare_keyword_matc
 from common.prompts import job_post_prompts
 from fastapi.responses import JSONResponse
 import json
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
+from typing import Optional
 import urllib.request
 import io
 
 router = APIRouter()
 
+class AnalyzeRequest(BaseModel):
+    job_description: str = ""
+    resume_url: str
+
+class ExtractTextRequest(BaseModel):
+    resume_url: str
+
+class ExtractKeywordsRequest(BaseModel):
+    job_description: str = ""
+    resume_url: str
+
 
 
 @router.post("/analyze")
-async def analyze_resume(job_description: str = Form(...), resume: UploadFile = File(None), resume_url: str = Form(None)):
-    if not resume and not resume_url:
-        raise HTTPException(status_code=400, detail="Either resume file or resume_url must be provided.")
+async def analyze_resume(request: Request):
+    print("request-->",request)
+    payload = await request.json()
+    job_description = payload.get("job_description")
+    resume_url = payload.get("resume_url")
+
+    if not resume_url:
+        raise HTTPException(status_code=400, detail="resume_url must be provided.")
         
     file_obj = None
-    print("job description:",job_description , "resule url:", resume_url , "resume:",resume)
-    if resume_url:
-        try:
-            req = urllib.request.Request(resume_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as response:
-                file_obj = io.BytesIO(response.read())
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to fetch resume from URL: {str(e)}")
-    else:
-        if resume.content_type != "application/pdf":
-            raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-        file_obj = resume.file
+    print("job description:",job_description , "resume url:", resume_url)
+    try:
+        req = urllib.request.Request(resume_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            file_obj = io.BytesIO(response.read())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch resume from URL: {str(e)}")
 
     try:
         resume_text = await asyncio.to_thread(extract_pdf_text, file_obj)
@@ -44,22 +57,19 @@ async def analyze_resume(job_description: str = Form(...), resume: UploadFile = 
 
 
 @router.post("/extract-pdf-text")
-async def extract_pdf_text_api(resume: UploadFile = File(None), resume_url: str = Form(None)):
-    if not resume and not resume_url:
-        raise HTTPException(status_code=400, detail="Either resume file or resume_url must be provided.")
+async def extract_pdf_text_api(payload: ExtractTextRequest):
+    resume_url = payload.resume_url
+    
+    if not resume_url:
+        raise HTTPException(status_code=400, detail="resume_url must be provided.")
         
     file_obj = None
-    if resume_url:
-        try:
-            req = urllib.request.Request(resume_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as response:
-                file_obj = io.BytesIO(response.read())
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to fetch resume from URL: {str(e)}")
-    else:
-        if resume.content_type != "application/pdf":
-            raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-        file_obj = resume.file
+    try:
+        req = urllib.request.Request(resume_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            file_obj = io.BytesIO(response.read())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch resume from URL: {str(e)}")
 
     try:
         resume_text = extract_pdf_text(file_obj)
@@ -69,22 +79,20 @@ async def extract_pdf_text_api(resume: UploadFile = File(None), resume_url: str 
 
 
 @router.post("/extract-keywords")
-async def extract_keywords(job_description: str = Form(...), resume: UploadFile = File(None), resume_url: str = Form(None)):
-    if not resume and not resume_url:
-        raise HTTPException(status_code=400, detail="Either resume file or resume_url must be provided.")
+async def extract_keywords(payload: ExtractKeywordsRequest):
+    job_description = payload.job_description
+    resume_url = payload.resume_url
+
+    if not resume_url:
+        raise HTTPException(status_code=400, detail="resume_url must be provided.")
         
     file_obj = None
-    if resume_url:
-        try:
-            req = urllib.request.Request(resume_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as response:
-                file_obj = io.BytesIO(response.read())
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to fetch resume from URL: {str(e)}")
-    else:
-        if resume.content_type != "application/pdf":
-            raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-        file_obj = resume.file
+    try:
+        req = urllib.request.Request(resume_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            file_obj = io.BytesIO(response.read())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch resume from URL: {str(e)}")
 
     try:
         resume_text = await asyncio.to_thread(extract_pdf_text, file_obj)
