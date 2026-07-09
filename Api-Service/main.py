@@ -23,17 +23,15 @@ if google_key:
 
 app = FastAPI()
 
-# Explicitly allow local frontend dev origins.
-# allowed_origins = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173/*", 
-#     "*"
-# ]
+cors_origins_raw = os.getenv("PYTHON_CORS_ALLOWED_ORIGINS", "")
+allowed_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
 
-# Enable CORS for all origins
+if not allowed_origins:
+    raise RuntimeError("PYTHON_CORS_ALLOWED_ORIGINS must be configured with explicit origins")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Block accidental commits of local uploads or document files.
+blocked_files=$(git diff --cached --name-only | grep -E '^(backend/uploads/|.*\.(pdf|doc|docx)$)')
+
+if [ -n "$blocked_files" ]; then
+  echo "Commit blocked: prohibited files detected."
+  echo "$blocked_files"
+  echo "Remove these files from the commit before retrying."
+  exit 1
+fi
+
+exit 0

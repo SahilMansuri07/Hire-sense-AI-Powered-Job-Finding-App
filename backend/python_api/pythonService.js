@@ -1,6 +1,19 @@
 import fs from "fs/promises";
 
 const PYTHON_API_BASE_URL = (process.env.PYTHON_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const PYTHON_INTERNAL_SERVICE_KEY = process.env.PYTHON_INTERNAL_SERVICE_KEY || "";
+
+function getInternalHeaders() {
+  if (!PYTHON_INTERNAL_SERVICE_KEY) {
+    throw new Error("PYTHON_INTERNAL_SERVICE_KEY is not configured");
+  }
+
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "X-Internal-Service-Key": PYTHON_INTERNAL_SERVICE_KEY,
+  };
+}
 
 async function readUploadBuffer(file) {
   if (file?.buffer) {
@@ -29,10 +42,7 @@ export async function extractPdfTextFromPython(fileOrUrl, job_description) {
 
     const response = await fetch(`${PYTHON_API_BASE_URL}/analyze`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: getInternalHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -52,10 +62,7 @@ export async function extractPdfTextFromPython(fileOrUrl, job_description) {
 export async function getAiJobDescription(payload) {
   const response = await fetch(`${PYTHON_API_BASE_URL}/generate-job-description`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: getInternalHeaders(),
     body: JSON.stringify(payload),
   });
 
@@ -82,10 +89,7 @@ export async function extractKeywordsFromPython(fileOrUrl, jobDescription = "") 
 
     const response = await fetch(`${PYTHON_API_BASE_URL}/extract-keywords`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: getInternalHeaders(),
       body: JSON.stringify(payload),
     });
 

@@ -12,6 +12,10 @@ router.post("/signup", middleware.validateJoi(authValidation.signupSchema), auth
 
 router.post("/login", middleware.validateJoi(authValidation.loginSchema), authController.login);
 
+router.post("/refresh", authController.refresh);
+
+router.post("/logout", middleware.tokenMiddleware, authController.logout);
+
 router.post("/upload-resume" , middleware.validateJoi(authValidation.uploadResumeSchema, true), authController.uploadResume);
 
 router.get("/skills" , authController.skillsListing);

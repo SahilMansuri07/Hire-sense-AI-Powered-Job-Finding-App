@@ -5,7 +5,7 @@ import {
   BarChart2, Menu, X, LogOut
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../redux/slices/authSlice';
+import { logoutUser } from '../../redux/slices/authSlice';
 
 export function RecruiterLayout() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export function RecruiterLayout() {
   const currentPath = location.pathname;
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutUser());
     navigate('/');
   };
 

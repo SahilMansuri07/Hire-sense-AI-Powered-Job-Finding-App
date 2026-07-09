@@ -15,6 +15,14 @@ const authController = {
         return authModule.login(req, res);
     },
 
+    async refresh(req, res){
+        return authModule.refreshToken(req, res);
+    },
+
+    async logout(req, res){
+        return authModule.logout(req, res);
+    },
+
     async uploadResume(req, res){
         return authModule.uploadResume(req, res);
     },

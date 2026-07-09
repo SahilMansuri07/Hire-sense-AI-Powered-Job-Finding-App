@@ -2,7 +2,6 @@ import localizify from "localizify";
 import Codes from "../config/status_codes.js";
 const { default: local , t } = localizify;
 import dotenv from "dotenv";
-import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
 import UserDevice from "../models/UserDevice.js";
 import es from "../languages/es.js";
@@ -20,13 +19,11 @@ local
 
 let is_lang = "en";
 
-const key = process.env.KEY || "";
-const iv = process.env.IV || "";
-
 const bypassRoutes = [
     "/api/v1/auth/login",
     "/api/v1/auth/signup",
     "/api/v1/auth/validate-user",
+    "/api/v1/auth/refresh",
     "/api/v1/recruiter/debug-jobs",
 ]
 
@@ -85,9 +82,8 @@ const sendApiResponse = async (res, httpStatus = Codes.SUCCESS , resCode, msgKey
         responsejson.data = resData;    
     }
 
-    const encryptedResponse = await encryption(responsejson);
     res.status(httpStatus);
-    res.json(encryptedResponse);
+    res.json(responsejson);
 };
 
 const validateJoi = (schema, allowEmpty = false) => {
@@ -211,97 +207,6 @@ const allowedRoles = (...roles) => {
     };
 };
 
-const checkApi = (req, res, next) => {
-    try {
-        const apiKey = req.headers['api-key'];
-        if (!apiKey || apiKey !== process.env.API_KEY) {
-            return sendApiResponse(
-                res,
-                Codes.UNAUTHORIZED,
-                Codes.INVALID_APIKEY,
-                "Invalid_or_missing_api_key",
-                null
-            );
-        }
-        next();
-    } catch (error) {
-        console.log("Error in API key verification: ", error);
-        return sendApiResponse(
-            res,
-            Codes.UNAUTHORIZED,
-            Codes.INVALID_APIKEY,
-            "Invalid_or_missing_api_key",
-            null
-        );
-    }
-}
-
-const encryption = async (req) => {
-    // Implement your encryption logic here
-    try {
-        const key = CryptoJS.enc.Utf8.parse(process.env.KEY || "");
-        const iv = CryptoJS.enc.Utf8.parse(process.env.IV || "");
-
-        if (!process.env.KEY || !process.env.IV) {
-            throw new Error("Missing KEY or IV in environment variables");
-        }
-
-        if(typeof req === 'object') {
-            req = JSON.stringify(req);
-        }
-        const encryptedData = CryptoJS.AES.encrypt(req, key, {
-            iv: iv,
-          }).toString();
-        return encryptedData;
-    } catch (error) {
-        console.log("Error in encryption: ", error);
-        throw new Error("Encryption failed");
-    }
-}
-
-const decryption = (req, res, next) => {
-    if (req.body && Object.keys(req.body).length !== 0) {
-        let encryptedBody = "";
-
-        if (typeof req.body === "string") {
-            encryptedBody = req.body;
-        } else if (typeof req.body.data === "string") {
-            encryptedBody = req.body.data;
-        } else if (typeof req.body.payload === "string") {
-            encryptedBody = req.body.payload;
-        } else {
-            // Request body is plain JSON, so skip AES decryption.
-            return next();
-        }
-
-        const decryptedData = CryptoJS.AES.decrypt(
-            encryptedBody,
-            CryptoJS.enc.Utf8.parse(key),
-            { iv: CryptoJS.enc.Utf8.parse(iv) },
-        ).toString(CryptoJS.enc.Utf8);
- 
-    let decryptionSend;
- 
-    try {
-      decryptionSend = JSON.parse(decryptedData);
-    } catch (error) {
-      console.log("Error parsing decrypted data:", error.message);
-      return sendApiResponse(
-        res,
-                Codes.SUCCESS,
-                Codes.RESPONSE_ERROR,
-                "rest_keywords_error",
-        null,
-      );
-    }
- 
-    req.body = decryptionSend;
-    return next();
-  }
- 
-  return next();
-};
-
 export default {
     // sendResponse,
     // allowedRoles,
@@ -310,9 +215,7 @@ export default {
     extractHeaderLanguage,
     getHeaderLanguage,
     sendApiResponse ,
-    checkApi ,
     allowedRoles,
     tokenMiddleware,
-    decryption,
     validateJoi,
 }

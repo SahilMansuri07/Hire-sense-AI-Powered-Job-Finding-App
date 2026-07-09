@@ -153,7 +153,7 @@ export function OnboardingFlow() {
         }
 
         const payload = {
-          resumeUrl: cloudData.secure_url,
+          resume_url: cloudData.secure_url,
           fileName: formData.resume.name,
           fileSize: formData.resume.size,
           fileType: formData.resume.type,

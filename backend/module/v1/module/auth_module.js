@@ -7,6 +7,122 @@ import bcryptjs from "bcryptjs";
 import { extractPdfTextFromPython } from "../../../python_api/pythonService.js";
 import JobRole from "../../../models/JobRole.js";
 
+const ALLOWED_RESUME_HOSTS = (process.env.RESUME_URL_ALLOWED_HOSTS || "res.cloudinary.com")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+
+function isAllowedResumeUrl(resumeUrl) {
+    try {
+        const parsed = new URL(resumeUrl);
+        if (parsed.protocol !== "https:") {
+            return false;
+        }
+
+        const hostname = parsed.hostname.toLowerCase();
+        return ALLOWED_RESUME_HOSTS.some((allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`));
+    } catch (error) {
+        return false;
+    }
+}
+
+const GENERIC_SIGNUP_COLLISION_MESSAGE = "Unable_to_create_account_with_provided_details";
+const REFRESH_COOKIE_NAME = "refresh_token";
+const MAX_RESUME_BYTES = Number(process.env.MAX_RESUME_BYTES || 10 * 1024 * 1024);
+const RESUME_VALIDATION_TIMEOUT_MS = Number(process.env.RESUME_VALIDATION_TIMEOUT_MS || 10000);
+
+function getRefreshCookieOptions() {
+    const sameSite = process.env.REFRESH_COOKIE_SAMESITE || "strict";
+    const secure = (process.env.REFRESH_COOKIE_SECURE || "true").toLowerCase() === "true";
+    const maxAgeDays = Number(process.env.REFRESH_COOKIE_MAX_AGE_DAYS || 30);
+
+    return {
+        httpOnly: true,
+        secure,
+        sameSite,
+        path: "/",
+        maxAge: maxAgeDays * 24 * 60 * 60 * 1000,
+    };
+}
+
+function setRefreshCookie(res, refreshToken) {
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, getRefreshCookieOptions());
+}
+
+function clearRefreshCookie(res) {
+    res.clearCookie(REFRESH_COOKIE_NAME, {
+        ...getRefreshCookieOptions(),
+        maxAge: 0,
+    });
+}
+
+function getRequestMeta(req) {
+    return {
+        device_token: req.body?.device_token,
+        device_type: req.body?.device_type,
+        device_name: req.headers["user-agent"] || req.body?.device_name || null,
+        device_model: req.body?.device_model,
+        os_version: req.body?.os_version,
+        uuid: req.body?.uuid || null,
+        ip: req.ip,
+    };
+}
+
+function getAccessTokenFromRequest(req) {
+    const authHeader = req.headers["authorization"] || req.headers["token"];
+    if (!authHeader) return null;
+    return authHeader.replace("Bearer ", "").trim();
+}
+
+async function validatePdfUrlContent(resumeUrl, declaredFileSize) {
+    if (declaredFileSize && Number(declaredFileSize) > MAX_RESUME_BYTES) {
+        throw new Error("Resume file exceeds allowed size");
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), RESUME_VALIDATION_TIMEOUT_MS);
+
+    try {
+        const headResponse = await fetch(resumeUrl, {
+            method: "HEAD",
+            redirect: "error",
+            signal: controller.signal,
+        });
+
+        if (!headResponse.ok) {
+            throw new Error("Unable to validate resume metadata");
+        }
+
+        const contentLength = Number(headResponse.headers.get("content-length") || 0);
+        if (contentLength > MAX_RESUME_BYTES) {
+            throw new Error("Resume file exceeds allowed size");
+        }
+
+        const contentType = String(headResponse.headers.get("content-type") || "").toLowerCase();
+        if (contentType && !contentType.includes("pdf")) {
+            throw new Error("Resume content type must be PDF");
+        }
+
+        const rangeResponse = await fetch(resumeUrl, {
+            method: "GET",
+            headers: { Range: "bytes=0-4" },
+            redirect: "error",
+            signal: controller.signal,
+        });
+
+        if (!rangeResponse.ok) {
+            throw new Error("Unable to validate resume file signature");
+        }
+
+        const buffer = Buffer.from(await rangeResponse.arrayBuffer());
+        if (buffer.length < 5 || buffer.toString("ascii", 0, 5) !== "%PDF-") {
+            throw new Error("Resume file signature is not a valid PDF");
+        }
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 const authModule = {
     checkCredentials : async (req, res) => {
         
@@ -69,15 +185,16 @@ const authModule = {
 
                     const createUser = await User.create(userPayload);
 
-                    const userDetails = await common.getUserDetails({id: createUser._id});
-                    const token = await common.generateToken(userDetails);
+                    const session = await common.createUserSession(createUser, getRequestMeta(req));
+                    const safeUser = common.sanitizeUser(createUser);
+                    setRefreshCookie(res, session.refreshToken);
 
                     return middleware.sendApiResponse(
                         res,
                         Codes.SUCCESS,
                         Codes.RESPONSE_SUCCESS,
                         "User_created_successfully",
-                        { ...userDetails, token }
+                        { ...safeUser, token: session.accessToken }
                     );
                 }
             }
@@ -103,7 +220,7 @@ const authModule = {
                     res,
                     Codes.SUCCESS,
                     Codes.RESPONSE_ERROR,
-                    "Email_already_exists",
+                    GENERIC_SIGNUP_COLLISION_MESSAGE,
                     null
                 );
             }
@@ -114,7 +231,7 @@ const authModule = {
                     res,
                     Codes.SUCCESS,
                     Codes.RESPONSE_ERROR,
-                    "Mobile_number_already_exists",
+                    GENERIC_SIGNUP_COLLISION_MESSAGE,
                     null
                 );
             }
@@ -152,17 +269,17 @@ const authModule = {
             if (country_code) userPayload.country_code = country_code;
 
             const createUser = await User.create(userPayload); 
-            
-            const userDetails = await common.getUserDetails({id: createUser._id});
-            
-            const token = await common.generateToken(userDetails);
+
+            const session = await common.createUserSession(createUser, getRequestMeta(req));
+            const safeUser = common.sanitizeUser(createUser);
+            setRefreshCookie(res, session.refreshToken);
 
             return middleware.sendApiResponse(
                 res,
                 Codes.SUCCESS,
                 Codes.RESPONSE_SUCCESS,
                 "User_created_successfully",
-                { ...userDetails, token }
+                { ...safeUser, token: session.accessToken }
             );
 
         } catch (error) {
@@ -170,8 +287,8 @@ const authModule = {
             if (error?.code === 11000) {
                 const duplicateField = Object.keys(error.keyPattern || {})[0] || "";
                 const duplicateMsgKey = duplicateField === "mobile_number"
-                    ? "Mobile_number_already_exists"
-                    : "Email_already_exists";
+                    ? GENERIC_SIGNUP_COLLISION_MESSAGE
+                    : GENERIC_SIGNUP_COLLISION_MESSAGE;
 
                 return middleware.sendApiResponse(
                     res,
@@ -277,7 +394,9 @@ const authModule = {
             //     { expiresIn: '7d' }
             // );
 
-            const token = await common.generateToken(user);
+            const session = await common.createUserSession(user, getRequestMeta(req));
+            const safeUser = common.sanitizeUser(user);
+            setRefreshCookie(res, session.refreshToken);
 
             return middleware.sendApiResponse(
                 res,
@@ -285,9 +404,9 @@ const authModule = {
                 Codes.RESPONSE_SUCCESS,
                 "Login_success",
                 {
-                    token,
-                    user,
-                    role: user?.role || "user"
+                    token: session.accessToken,
+                    user: safeUser,
+                    role: safeUser?.role || "user"
                 }
             );
 
@@ -297,6 +416,73 @@ const authModule = {
                 res,
                 Codes.ERROR,
                 Codes.RESPONSE_SUCCESS,
+                "Internal_Server_Error",
+                null
+            );
+        }
+    },
+
+    refreshToken: async (req, res) => {
+        try {
+            const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+            if (!refreshToken) {
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.UNAUTHORIZED,
+                    Codes.INVALID_TOKEN,
+                    "Invalid_or_missing_token",
+                    null
+                );
+            }
+
+            const session = await common.refreshUserSession(refreshToken, getRequestMeta(req));
+            setRefreshCookie(res, session.refreshToken);
+
+            return middleware.sendApiResponse(
+                res,
+                Codes.SUCCESS,
+                Codes.RESPONSE_SUCCESS,
+                "Token_refreshed_successfully",
+                {
+                    token: session.accessToken,
+                    user: session.user,
+                    role: session.user?.role || "user",
+                }
+            );
+        } catch (error) {
+            clearRefreshCookie(res);
+            return middleware.sendApiResponse(
+                res,
+                Codes.UNAUTHORIZED,
+                Codes.INVALID_TOKEN,
+                "Invalid_or_missing_token",
+                null
+            );
+        }
+    },
+
+    logout: async (req, res) => {
+        try {
+            const accessToken = getAccessTokenFromRequest(req);
+            const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+
+            await common.revokeSessionByAccessToken(accessToken);
+            await common.revokeSessionByRefreshToken(refreshToken);
+
+            clearRefreshCookie(res);
+            return middleware.sendApiResponse(
+                res,
+                Codes.SUCCESS,
+                Codes.RESPONSE_SUCCESS,
+                "Logout_success",
+                null
+            );
+        } catch (error) {
+            console.log("Error in logout: ", error);
+            return middleware.sendApiResponse(
+                res,
+                Codes.INTERNAL_ERROR,
+                Codes.RESPONSE_ERROR,
                 "Internal_Server_Error",
                 null
             );
@@ -331,12 +517,34 @@ const authModule = {
                     null
                 );
             }
-            
+
+            if (!isAllowedResumeUrl(resume_url)) {
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
+                    "Valid_resume_url_required",
+                    null
+                );
+            }
+
             if (fileType && !fileType.toLowerCase().includes('pdf')) {
                 return middleware.sendApiResponse(
                     res,
                     Codes.ERROR,
                     Codes.RESPONSE_SUCCESS,
+                    "Only_PDF_allowed",
+                    null
+                );
+            }
+
+            try {
+                await validatePdfUrlContent(resume_url, fileSize);
+            } catch (validationError) {
+                return middleware.sendApiResponse(
+                    res,
+                    Codes.SUCCESS,
+                    Codes.RESPONSE_ERROR,
                     "Only_PDF_allowed",
                     null
                 );
@@ -621,14 +829,20 @@ const authModule = {
             const updatedUser = await User.findByIdAndUpdate(
                 userId,
                 { $set: updateData },
-                { new: true, select: '-password -__v' }
+                { new: true }
             );
 
             if (!updatedUser) {
                 return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_not_found", null);
             }
 
-            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Profile_updated_successfully", updatedUser);
+            return middleware.sendApiResponse(
+                res,
+                Codes.SUCCESS,
+                Codes.RESPONSE_SUCCESS,
+                "Profile_updated_successfully",
+                common.sanitizeUser(updatedUser)
+            );
         } catch (error) {
             console.log("Error in editProfile module: ", error);
             return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);

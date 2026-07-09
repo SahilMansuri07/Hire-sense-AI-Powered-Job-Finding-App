@@ -4,8 +4,62 @@ import nodemailer from "nodemailer";
 import UserDevice from "../models/UserDevice.js";
 import createmailTemplate from "./mail.js";
 
+const SAFE_USER_FIELDS = [
+    "_id",
+    "name",
+    "email",
+    "role",
+    "login_type",
+    "mobile_number",
+    "country_code",
+    "profile_image",
+    "skills",
+    "jobRole",
+    "steps",
+    "created_at",
+    "updated_at",
+    "is_active",
+];
+
+const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || "30m";
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
+
+const toObject = (doc) => {
+    if (!doc) return null;
+    if (typeof doc.toObject === "function") return doc.toObject();
+    return doc;
+};
+
+const buildDeviceData = (userId, request = {}) => ({
+    userId,
+    device_token: request.device_token || null,
+    device_type: request.device_type || null,
+    device_name: request.device_name || null,
+    device_model: request.device_model || null,
+    os_version: request.os_version || null,
+    uuid: request.uuid || null,
+    ip: request.ip || null,
+    last_active_at: new Date(),
+    is_active: true,
+    is_delete: false,
+});
+
 
 const common = {
+    sanitizeUser(userDoc) {
+        const user = toObject(userDoc);
+        if (!user) return null;
+
+        const sanitized = {};
+        for (const field of SAFE_USER_FIELDS) {
+            if (Object.prototype.hasOwnProperty.call(user, field)) {
+                sanitized[field] = user[field];
+            }
+        }
+
+        return sanitized;
+    },
+
     async checkUniqueEmail(email) {
         try {
             if (!email) return null;
@@ -60,13 +114,13 @@ const common = {
                     is_delete: false,
                     is_active: true,
                 }).lean();
-                return result || null;
+                return common.sanitizeUser(result);
             } else {
                 const result = await User.find({
                     is_active: true,
                     is_delete: false,
                 }).sort({ created_at: -1 }).lean();
-                return result || [];
+                return (result || []).map((user) => common.sanitizeUser(user));
             }
         } catch (error) {
             console.error("Error fetching user details: ", error);
@@ -74,58 +128,145 @@ const common = {
         }
     },
 
-    generateToken: async function (user, request = {}) {
+    generateAccessToken(user) {
+        const normalizedUser = Array.isArray(user) ? user[0] : user;
+        if (!normalizedUser || !normalizedUser._id) {
+            throw new Error("Invalid user data for access token generation");
+        }
+
+        const payload = {
+            id: normalizedUser._id,
+            name: normalizedUser.name || null,
+            email: normalizedUser.email || null,
+            role: normalizedUser.role || null,
+            login_type: normalizedUser.login_type || null,
+        };
+
+        return jwt.sign(payload, process.env.JWT_WEB_TOKEN, { expiresIn: ACCESS_TOKEN_EXPIRES_IN });
+    },
+
+    generateRefreshToken(user) {
+        const normalizedUser = Array.isArray(user) ? user[0] : user;
+        if (!normalizedUser || !normalizedUser._id) {
+            throw new Error("Invalid user data for refresh token generation");
+        }
+
+        const refreshSecret = process.env.JWT_REFRESH_TOKEN || process.env.JWT_WEB_TOKEN;
+        return jwt.sign({ id: normalizedUser._id }, refreshSecret, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
+    },
+
+    async createUserSession(user, request = {}) {
         try {
             const normalizedUser = Array.isArray(user) ? user[0] : user;
 
             if (!normalizedUser || !normalizedUser._id) {
-                throw new Error("Invalid user data for token generation");
+                throw new Error("Invalid user data for session generation");
             }
 
-            const payload = {
-                id: normalizedUser._id,
-                name: normalizedUser.name || null,
-                email: normalizedUser.email || null,
-                role : normalizedUser.role || null,
-                login_type: normalizedUser.login_type || null,
-            };
+            const accessToken = common.generateAccessToken(normalizedUser);
+            const refreshToken = common.generateRefreshToken(normalizedUser);
 
-            const token = jwt.sign(payload, process.env.JWT_WEB_TOKEN, { expiresIn: "1h" });
+            const refreshPayload = jwt.decode(refreshToken);
 
             const userDeviceData = {
-                userId: normalizedUser._id,
-                token: token,
-                device_token: request.device_token || null,
-                device_type: request.device_type || null,
-                device_name: request.device_name || null,
-                device_model: request.device_model || null,
-                os_version: request.os_version || null,
-                uuid: request.uuid || null,
-                ip: request.ip || null,
+                ...buildDeviceData(normalizedUser._id, request),
+                token: accessToken,
+                refresh_token: refreshToken,
+                refresh_token_expires_at: refreshPayload?.exp ? new Date(refreshPayload.exp * 1000) : null,
             };
 
-            const existingDevice = await UserDevice.findOne({
-                userId: normalizedUser._id,
-                token: token,
-            });
-            
-            if (existingDevice) {
-                await UserDevice.updateOne(
-                    { _id: existingDevice._id },
-                    { $set: { ...userDeviceData, is_active: true } }
-                );
-                return token;
-            }
+            await UserDevice.create(userDeviceData);
 
-            const userDevice = new UserDevice(userDeviceData);
-            await userDevice.save();
-
-            return token;
+            return { accessToken, refreshToken };
 
         } catch (error) {
             console.log(error);
             throw error;
         }
+    },
+
+    async refreshUserSession(refreshToken, request = {}) {
+        const refreshSecret = process.env.JWT_REFRESH_TOKEN || process.env.JWT_WEB_TOKEN;
+        let decoded;
+
+        try {
+            decoded = jwt.verify(refreshToken, refreshSecret);
+        } catch (error) {
+            throw new Error("Invalid refresh token");
+        }
+
+        const session = await UserDevice.findOne({
+            userId: decoded.id,
+            refresh_token: refreshToken,
+            is_active: true,
+            is_delete: false,
+        });
+
+        if (!session) {
+            throw new Error("Refresh session not found");
+        }
+
+        const user = await User.findOne({ _id: decoded.id, is_active: true, is_delete: false }).lean();
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        const accessToken = common.generateAccessToken(user);
+        const newRefreshToken = common.generateRefreshToken(user);
+        const refreshPayload = jwt.decode(newRefreshToken);
+
+        await UserDevice.updateOne(
+            { _id: session._id },
+            {
+                $set: {
+                    ...buildDeviceData(decoded.id, request),
+                    token: accessToken,
+                    refresh_token: newRefreshToken,
+                    refresh_token_expires_at: refreshPayload?.exp ? new Date(refreshPayload.exp * 1000) : null,
+                },
+            }
+        );
+
+        return {
+            accessToken,
+            refreshToken: newRefreshToken,
+            user: common.sanitizeUser(user),
+        };
+    },
+
+    async revokeSessionByAccessToken(accessToken) {
+        if (!accessToken) return;
+        await UserDevice.updateMany(
+            { token: accessToken, is_delete: false },
+            {
+                $set: {
+                    is_active: false,
+                    token: null,
+                    refresh_token: null,
+                    refresh_token_expires_at: null,
+                },
+            }
+        );
+    },
+
+    async revokeSessionByRefreshToken(refreshToken) {
+        if (!refreshToken) return;
+        await UserDevice.updateMany(
+            { refresh_token: refreshToken, is_delete: false },
+            {
+                $set: {
+                    is_active: false,
+                    token: null,
+                    refresh_token: null,
+                    refresh_token_expires_at: null,
+                },
+            }
+        );
+    },
+
+    generateToken: async function (user, request = {}) {
+        const session = await common.createUserSession(user, request);
+        return session.accessToken;
     },
 
      async configEmail(data , mailSubject) {

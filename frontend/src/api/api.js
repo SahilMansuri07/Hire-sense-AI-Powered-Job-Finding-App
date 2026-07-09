@@ -3,6 +3,7 @@ import api from "./axios";
 export const validateUserAPI = (data) => api.post('/auth/validate-user', data);
 export const SignUpAPI = (data) => api.post('/auth/signup', data);
 export const loginAPI = (data) => api.post('/auth/login', data);
+export const logoutAPI = () => api.post('/auth/logout');
 
 // Auth & User APIs
 export const getSkillsAPI = () => api.get('/auth/skills');

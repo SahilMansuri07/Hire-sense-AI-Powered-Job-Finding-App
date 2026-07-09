@@ -15,6 +15,18 @@ const userDeviceSchema = new mongoose.Schema(
         trim: true,
     },
 
+    refresh_token: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
+
+    refresh_token_expires_at: {
+      type: Date,
+      default: null,
+    },
+
     device_token: {
       type: String,
       default: null,
@@ -74,7 +86,7 @@ const userDeviceSchema = new mongoose.Schema(
 );
 
 // Fast lookup when sending push notifications by role
-userDeviceSchema.index({ userId: 1, role: 1, is_active: 1 });
+userDeviceSchema.index({ userId: 1, is_active: 1 });
 
 const UserDevice =
   mongoose.models.UserDevice || mongoose.model("UserDevice", userDeviceSchema);

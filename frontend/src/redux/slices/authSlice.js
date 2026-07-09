@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { SignUpAPI, validateUserAPI, loginAPI } from '../../api/api';
+import { SignUpAPI, validateUserAPI, loginAPI, logoutAPI } from '../../api/api';
 import { authStorage } from '../../utils/authStorage';
 
 export const validateUser = createAsyncThunk(
@@ -47,12 +47,26 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const logoutUser = createAsyncThunk(
+  'auth/logoutUser',
+  async (_, { dispatch }) => {
+    try {
+      await logoutAPI();
+    } catch (error) {
+      // Session may already be invalid server-side; still clear local state.
+    } finally {
+      dispatch(logout());
+    }
+    return true;
+  }
+);
+
 const session = authStorage.getSession();
 
 const initialState = {
   user: session?.user || null,
   token: session?.token || null,
-  isAuthenticated: !!session?.token,
+  isAuthenticated: !!session?.user,
   role: session?.role || null,
   loading: false,
   error: null,
@@ -104,6 +118,7 @@ const authSlice = createSlice({
           state.user = action.payload.data;
           state.isAuthenticated = true;
           state.role = action.meta.arg.role; 
+          authStorage.setAccessToken(state.token);
           
           const userDataToStore = { ...action.payload.data, role: action.meta.arg.role };
           authStorage.setSession(state.role, state.token, userDataToStore);
@@ -126,6 +141,7 @@ const authSlice = createSlice({
           state.user = action.payload.data.user || action.payload.data;
           state.isAuthenticated = true;
           state.role = action.payload.data.role || (action.payload.data.user && action.payload.data.user.role); 
+          authStorage.setAccessToken(state.token);
           
           const userDataToStore = { ...state.user, role: state.role };
           authStorage.setSession(state.role, state.token, userDataToStore);
