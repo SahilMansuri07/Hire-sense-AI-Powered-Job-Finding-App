@@ -58,7 +58,7 @@ export function CandidateProfile() {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-bold mb-2">{user?.name || user?.first_name || 'Candidate Name'}</h1>
-              <p className="text-xl text-gray-400 mb-4">{user?.jobRole || 'Professional Candidate'}</p>
+              <p className="text-xl text-gray-400 mb-4">{user?.jobRole?.jobRoleId?.name || user?.jobRole?.name || 'Professional Candidate'}</p>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="flex items-center gap-2 text-gray-400">
                   <Mail className="w-4 h-4" />
@@ -70,14 +70,14 @@ export function CandidateProfile() {
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <Briefcase className="w-4 h-4" />
-                  {user?.experience || 'Ready for opportunities'}
+                  {user?.jobRole?.experienceLevel || 'Ready for opportunities'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
                   <Calendar className="w-4 h-4" />
                   Active Member
                 </div>
               </div>
-              <button className="px-6 py-3 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-xl hover:shadow-lg hover:shadow-[#1f7af9]/30 transition-all">
+              <button onClick={() => navigate('/settings')} className="px-6 py-3 bg-gradient-to-r from-[#1f7af9] to-[#bc13fe] rounded-xl hover:shadow-lg hover:shadow-[#1f7af9]/30 transition-all">
                 Edit Profile
               </button>
             </div>

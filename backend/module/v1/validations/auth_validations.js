@@ -60,7 +60,7 @@ const authValidation = {
 
     uploadResumeSchema: Joi.object({
         job_description: Joi.string().max(5000).optional(),
-        resumeUrl: Joi.string().uri().required(),
+        resume_url: Joi.string().uri().required(),
         fileName: Joi.string().optional(),
         fileSize: Joi.number().optional(),
         fileType: Joi.string().optional(),
@@ -71,6 +71,13 @@ const authValidation = {
         jobRoleId: Joi.string().required(),
         experienceLevel: Joi.string().valid("Fresher", "Junior", "Mid", "Senior").required(),
         Skills: Joi.array().items(Joi.string()).min(1).required(),
+    }),
+
+    editProfileSchema: Joi.object({
+        name: Joi.string().min(2).max(100).optional(),
+        email: Joi.string().email().optional(),
+        country_code: Joi.string().allow("", null).optional(),
+        mobile_number: Joi.string().allow("", null).optional(),
     }),
 
 };

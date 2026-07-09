@@ -62,6 +62,10 @@ const authController = {
             return authModule.setUpPreferences(req, res);
         });
     },
+
+    async editProfile(req, res){
+        return authModule.editProfile(req, res);
+    },
 }
 
 

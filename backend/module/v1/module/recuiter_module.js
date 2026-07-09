@@ -3,6 +3,7 @@ import JobApplicant from "../../../models/JobApplicant.js";
 import Resume from "../../../models/Resume.js";
 import middleware from "../../../middleware/middleware.js";
 import Codes from "../../../config/status_codes.js";
+import mongoose from "mongoose";
 
 const PYTHON_API_BASE_URL = (process.env.PYTHON_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
@@ -306,26 +307,68 @@ const recruiterModule = {
         try {
             const page = req.body?.page || 1;
             const limit = req.body?.limit || 10;
-            const recruiterId  = req.loginUser.id;
-            // console.log("recruiterId", recruiterId);    
+            const { status, sort, search } = req.body;
+            const recruiterId = req.loginUser.id;
 
-            // fetch paginated list of jobs for this recruiter
             const currentPage = parseInt(page);
             const pageLimit = parseInt(limit);
             const skip = (currentPage - 1) * pageLimit;
 
-            const filter = {
-                recruiterId
-            };
+            const filter = { recruiterId: new mongoose.Types.ObjectId(recruiterId), is_delete: { $ne: true } };
 
-            const jobs = await JobPost.find({recruiterId})
-                .sort({ created_at: -1 })
-                .skip(skip)
-                .limit(pageLimit)
-                .lean();
+            if (status && status !== 'all') {
+                filter.status = status;
+            }
+            if (search) {
+                filter.jobTitle = { $regex: search, $options: 'i' };
+            }
 
-            // console.log("jobs", jobs);
+            let sortOptions = { created_at: -1 };
+            if (sort === 'applications_desc') sortOptions = { applicationCount: -1 };
+            else if (sort === 'applications_asc') sortOptions = { applicationCount: 1 };
+            else if (sort === 'oldest') sortOptions = { created_at: 1 };
 
+            const pipeline = [
+                { $match: filter },
+                {
+                    $lookup: {
+                        from: 'job_applicants',
+                        localField: '_id',
+                        foreignField: 'jobId',
+                        as: 'applications'
+                    }
+                },
+                {
+                    $addFields: {
+                        applicationCount: {
+                            $size: {
+                                $filter: {
+                                    input: "$applications",
+                                    as: "app",
+                                    cond: { $eq: ["$$app.is_delete", false] }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        jobTitle: 1,
+                        department: 1,
+                        employmentType: 1,
+                        location: 1,
+                        status: 1,
+                        created_at: 1,
+                        applicationCount: 1
+                    }
+                },
+                { $sort: sortOptions },
+                { $skip: skip },
+                { $limit: pageLimit }
+            ];
+
+            const jobs = await JobPost.aggregate(pipeline);
+            
             const total = await JobPost.countDocuments(filter);
             const totalPages = Math.ceil(total / pageLimit);
 
@@ -386,45 +429,6 @@ const recruiterModule = {
 
         } catch (error) {
              console.log("Error in fetchRecruiterJobById: ", error);
-            return middleware.sendApiResponse(
-                res,
-                Codes.INTERNAL_ERROR,
-                Codes.RESPONSE_ERROR,
-                "Internal_Server_Error",
-                null
-            );
-        }
-    },
-
-    viewApplication: async (req, res) => {
-        try {
-            const { jobId } = req.body;
-            const applications = await Application.find({
-                jobId,
-                recruiterId: req.loginUser.id,
-                is_delete: false,
-            });
-
-             if(!applications){
-                return middleware.sendApiResponse(
-                    res,
-                    Codes.SUCCESS,
-                    Codes.RESPONSE_ERROR,
-                    "Applications_not_found",
-                    null
-                );
-            }
-            
-            return middleware.sendApiResponse(
-                res,
-                Codes.SUCCESS,
-                Codes.RESPONSE_SUCCESS,
-                "Applications_fetched_successfully",
-                applications
-            );
-            
-        } catch (error) {
-            console.log("Error in viewApplication: ", error);
             return middleware.sendApiResponse(
                 res,
                 Codes.INTERNAL_ERROR,
@@ -636,18 +640,27 @@ const recruiterModule = {
             console.log("Error in updateApplicationStatus: ", error);
             return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
         }
+    },
+
+    updateJobStatus: async (req, res) => {
+        try {
+            const { jobId, status } = req.body;
+            const recruiterId = req.loginUser.id;
+
+            const job = await JobPost.findOne({ _id: jobId, recruiterId: recruiterId, is_delete: false });
+            if (!job) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Job_not_found", null);
+            }
+
+            job.status = status;
+            await job.save();
+
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Job_status_updated_successfully", job);
+        } catch (error) {
+            console.log("Error in updateJobStatus: ", error);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
+        }
     }
-    
-    // ListApplication: async (req ,res) => {
-        //     try {
-    //         const {jobId} = req.body;
-    //         const applicants = await JobApplicant.find({jobId,is_delete:{$ne:true}}).populate("userId", "fullName email");
-    //         return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Applications_fetched_successfully", applicants);
-    //     } catch (error) {
-    //         console.log("Error in ListApplication: ", error);
-    //         return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
-    //     }   
-    // },
     
 }
 

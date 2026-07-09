@@ -11,6 +11,7 @@ export const getJobRoleSkillsAPI = (jobRoleId) => api.get(`/auth/job-roles/${job
 export const setupPreferencesAPI = (data) => api.post('/auth/set-up-preferences', data);
 export const getUserProfileAPI = () => api.get('/auth/user-profile');
 export const uploadResumeAPI = (data) => api.post('/auth/upload-resume', data);
+export const editProfileAPI = (data) => api.put('/auth/edit-profile', data);
 
 // Applicant Modules
 export const getUserDashboardAPI = () => api.get('/applicant/dashboard');
@@ -20,5 +21,6 @@ export const applyJobAPI = (id, data) => api.post(`/applicant/apply-job/${id}`, 
 export const getAppliedJobsAPI = () => api.get('/applicant/applied-jobs');
 export const getApplicationStatusAPI = () => api.get('/applicant/application-status');
 export const getResumeScoreAPI = () => api.get('/applicant/resume-score');
+export const getSkillGapAnalysisAPI = () => api.get('/applicant/skill-gap-analysis');
 
 // recruiter modules API 

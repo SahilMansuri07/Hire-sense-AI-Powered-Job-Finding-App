@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import nodemailer from "nodemailer";
 import UserDevice from "../models/UserDevice.js";
+import createmailTemplate from "./mail.js";
 
 
 const common = {
@@ -89,7 +90,7 @@ const common = {
                 login_type: normalizedUser.login_type || null,
             };
 
-            const token = jwt.sign(payload, process.env.JWT_WEB_TOKEN, { expiresIn: "365d" });
+            const token = jwt.sign(payload, process.env.JWT_WEB_TOKEN, { expiresIn: "1h" });
 
             const userDeviceData = {
                 userId: normalizedUser._id,
@@ -127,7 +128,31 @@ const common = {
         }
     },
 
-    async sendOtpMail({ toEmail, subject, htmlMessage }) {
+     async configEmail(data , mailSubject) {
+        if (!data?.email) return;
+        
+        const html = createmailTemplate({
+           applicationId : data.applicationId,
+           fullName : data.fullName,
+           jobTitle : data.jobTitle,
+           status : data.status,
+           createdAt : data.createdAt,
+        });
+        
+        const subject = mailSubject
+        
+        const mailResult = await common.sendMail({
+            toEmail: data.email,
+            subject,
+            htmlMessage: html,
+        });
+        
+        if (mailResult?.skipped) {
+            console.warn("Email skipped:", mailResult.reason);
+        }
+    },
+
+    async sendMail({ toEmail, subject, htmlMessage }) {
  
         if (!toEmail || !subject || !htmlMessage) {
         return { skipped: true, reason: "Missing toEmail/subject/htmlMessage" };

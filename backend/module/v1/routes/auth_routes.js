@@ -12,14 +12,16 @@ router.post("/signup", middleware.validateJoi(authValidation.signupSchema), auth
 
 router.post("/login", middleware.validateJoi(authValidation.loginSchema), authController.login);
 
-router.post("/upload-resume" , middleware.tokenMiddleware, authController.uploadResume);
+router.post("/upload-resume" , middleware.validateJoi(authValidation.uploadResumeSchema, true), authController.uploadResume);
 
 router.get("/skills" , authController.skillsListing);
 router.get("/job-roles" , authController.jobRolesListing);
 router.get("/job-roles/:id/skills" , authController.jobRoleSkills);
 
-router.post("/set-up-preferences" , authController.setUpPreferences);
+router.post("/set-up-preferences" , middleware.validateJoi(authValidation.setUpPreferencesSchema, true), authController.setUpPreferences);
 
 router.get("/user-profile" , middleware.tokenMiddleware , authController.getUserProfile);
+
+router.put("/edit-profile", middleware.tokenMiddleware, middleware.validateJoi(authValidation.editProfileSchema), authController.editProfile);
 
 export default router;

@@ -10,11 +10,8 @@ import applicantRoutes from "./module/v1/routes/user_routes.js";
 dotenv.config();
 const PORT = process.env.PORT || 7000;
 const app = express();
-
 app.use(express.urlencoded({ extended: true }));
-
 app.use(express.json());
-
 app.use(cors({
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim()) : true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -23,14 +20,10 @@ app.use(cors({
 
 // Middleware to extract language from headers
 app.use(middleware.extractHeaderLanguage);
-
+//uploads folder for static files
 app.use("/uploads", express.static("uploads"));
-
 app.use(middleware.tokenMiddleware);
-// app.use(middleware.allowedRoles("user", "recruiter", "admin"));
-
 app.use(middleware.checkApi);
-
 app.use(middleware.decryption);
 
 
@@ -40,7 +33,6 @@ app.use("/api/v1/recruiter/", recruiterRoutes);
 app.use("/api/v1/applicant/", applicantRoutes);
 
 
-//uploads folder for static files
 
 // Start server
 async function startServer() {

@@ -345,8 +345,8 @@ const authModule = {
             const fileUrl = resume_url;
             const safeFileName = fileName || 'resume.pdf';
             
-            // Check if a resume with same userId + fileName exists → UPDATE instead of create
-            const existingResume = await Resume.findOne({ userId, fileName: safeFileName });
+            // Check if a resume for the user already exists → UPDATE instead of create
+            const existingResume = await Resume.findOne({ userId });
 
             console.log("uploadResume: existingResume found:", existingResume ? { id: existingResume._id?.toString() } : null);
 
@@ -354,7 +354,7 @@ const authModule = {
 
             if (existingResume) {
                 resume = await Resume.findOneAndUpdate(
-                    { userId, fileName: safeFileName },
+                    { userId },
                     {
                         fileUrl,
                         fileName: safeFileName,
@@ -377,9 +377,7 @@ const authModule = {
                 console.log("uploadResume: created new resume for userId:", userId, "resumeId:", resume._id?.toString());
             }
             
-            let pyResponse = null;
-            console.log("job_description",job_description);
-            console.log("fileUrl"   ,   fileUrl);
+            let pyResponse = null
             try {
                const pythonResult = await extractPdfTextFromPython(fileUrl, job_description);    
                
@@ -455,31 +453,6 @@ const authModule = {
             return null;
         }
     },
-
-    // skillsListing : async (req, res) => {
-    //     try {
-    //         const skills = await Skill.find({
-    //             is_delete: false,
-    //             is_active: true,
-    //         });
-    //         return middleware.sendApiResponse( 
-    //             res,
-    //             Codes.SUCCESS,
-    //             Codes.RESPONSE_SUCCESS,
-    //             "Skills_listed",
-    //             skills
-    //         );
-    //     } catch (error) {
-    //         console.log("Error in skillsListing: ", error);
-    //         return middleware.sendApiResponse(
-    //             res,
-    //             Codes.ERROR,
-    //             Codes.RESPONSE_SUCCESS,
-    //             "Internal_Server_Error",
-    //             null
-    //         );
-    //     }
-    // },
 
     jobRolesListing : async (req, res) => {
         try {
@@ -578,7 +551,6 @@ const authModule = {
             const { jobRoleId, experienceLevel, Skills } = req.body;
           
             const setPref = await authModule.setPreferences(jobRoleId, experienceLevel, userId);
-            console.log("setPref", setPref);
             if(setPref === null){
                 return middleware.sendApiResponse(
                     res,
@@ -619,6 +591,47 @@ const authModule = {
                 "Internal_Server_Error",
                 null
             );
+        }
+    },
+
+    editProfile: async (req, res) => {
+        try {
+            const userId = req.loginUser.id;
+            const { name, email, mobile_number, country_code } = req.body;
+
+            const updateData = {};
+            if (name) updateData.name = name;
+            if (email) updateData.email = email;
+            if (mobile_number) updateData.mobile_number = mobile_number;
+            if (country_code !== undefined) updateData.country_code = country_code;
+
+            if (email) {
+                const existingEmail = await User.findOne({ email, _id: { $ne: userId }, is_delete: false });
+                if (existingEmail) {
+                    return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Email_already_in_use", null);
+                }
+            }
+            if (mobile_number) {
+                const existingMobile = await User.findOne({ mobile_number, _id: { $ne: userId }, is_delete: false });
+                if (existingMobile) {
+                    return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Mobile_number_already_in_use", null);
+                }
+            }
+
+            const updatedUser = await User.findByIdAndUpdate(
+                userId,
+                { $set: updateData },
+                { new: true, select: '-password -__v' }
+            );
+
+            if (!updatedUser) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_not_found", null);
+            }
+
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Profile_updated_successfully", updatedUser);
+        } catch (error) {
+            console.log("Error in editProfile module: ", error);
+            return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
         }
     },
 }

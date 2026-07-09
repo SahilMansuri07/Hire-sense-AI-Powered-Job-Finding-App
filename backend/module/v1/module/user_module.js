@@ -4,7 +4,10 @@ import User from "../../../models/User.js";
 import Resume from "../../../models/Resume.js";
 import JobPost from "../../../models/JobPost.js";
 import JobApplicant from "../../../models/JobApplicant.js";
+import JobRole from "../../../models/JobRole.js";
 import { extractPdfTextFromPython, extractKeywordsFromPython } from "../../../python_api/pythonService.js";
+import common from "../../../config/common.js";
+import { application } from "express";
 
 // Builds a MongoDB filter object from request body params.
 // Only includes fields that are actually passed in.
@@ -52,53 +55,40 @@ const buildFilter = (body = {}) => {
 
 const userModule = {
 
-    fetchJobs: async (req, res) => {
-        try {
-            const userId = req.loginUser.id;
-            
-            if (!userId) {
-                return middleware.sendApiResponse(
-                    res,
-                    Codes.SUCCESS,
-                    Codes.RESPONSE_ERROR,
-                    "User_ID_not_found",
-                    null
-                );
-            }
-            const page = parseInt(req.body.page) || 1;
-            const limit = parseInt(req.body.limit) || 10;
-            const skip = (page - 1) * limit;
-            const filter = buildFilter(req.body);
-            const jobs = await JobPost.find(filter).skip(skip).limit(limit).lean();
-            const total = await JobPost.countDocuments(filter);
-            const totalPages = Math.ceil(total / limit);
-
-            return middleware.sendApiResponse(
-                res,
-                Codes.SUCCESS,
-                Codes.RESPONSE_SUCCESS,
-                "Jobs_fetched_successfully",
-                {
-                    jobs,
-                    pagination: {
-                        total,
-                        totalPages,
-                        currentPage: page,
-                        limit
-                    }
-                }
-            );
-        } catch (error) {
-            console.log("Error in fetchJobs: ", error);
-            return middleware.sendApiResponse(
-                res,
-                Codes.INTERNAL_ERROR,
-                Codes.RESPONSE_ERROR,
-                "Internal_Server_Error",
-                null
-            );
+   fetchJobs: async (req, res) => {
+    try {
+        const userId = req.loginUser.id;
+        if (!userId) {
+            return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_ID_not_found", null);
         }
-    },
+
+        const page = parseInt(req.body.page) || 1;
+        const limit = parseInt(req.body.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const filter = buildFilter(req.body);
+        filter.status = "published"; // enforce at query level
+
+        const appliedJobs = await JobApplicant.find({ userId: userId }).select('jobId').lean();
+        const appliedJobIds = appliedJobs.map(app => app.jobId);
+        
+        if (appliedJobIds.length > 0) {
+            filter._id = { $nin: appliedJobIds };
+        }
+
+        const jobs = await JobPost.find(filter).skip(skip).limit(limit).lean();
+        const total = await JobPost.countDocuments(filter);
+        const totalPages = Math.ceil(total / limit);
+
+        return middleware.sendApiResponse(
+            res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Jobs_fetched_successfully",
+            { jobs, pagination: { total, totalPages, currentPage: page, limit } }
+        );
+    } catch (error) {
+        console.log("Error in fetchJobs: ", error);
+        return middleware.sendApiResponse(res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR, "Internal_Server_Error", null);
+    }
+},
 
     fetchJobById: async (req, res) => {
         try {
@@ -220,7 +210,14 @@ const userModule = {
                 coverLetter,
                 linkedIn,
             });
-
+            await common.configEmail({
+                 email :email ,
+                 fullname : fullName,
+                 applicationId : jobApplication._id ,
+                 JobTitle : job.jobTitle,
+                 status : jobApplication.status,
+                 cretedAt : jobApplication.createdAt,
+                } , "Job Application Confirmation");
             return middleware.sendApiResponse(
                 res,
                 Codes.SUCCESS,
@@ -471,6 +468,131 @@ const userModule = {
             );
         } catch (error) {
             console.log("Error in dashBoard: ", error);
+            return middleware.sendApiResponse(
+                res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR,
+                "Internal_Server_Error", null
+            );
+        }
+    },
+
+    skillGapAnalysis: async (req, res) => {
+        try {
+            const userId = req.loginUser.id;
+            if (!userId) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_ID_not_found", null);
+            }
+
+            // 1. Fetch user to get userSkills and jobRole
+            const user = await User.findById(userId).populate("jobRole.jobRoleId").lean();
+            if (!user) {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "User_not_found", null);
+            }
+
+            // userSkills
+            const userSkills = (user.skills || []).map(s => ({
+                skill: s,
+                yourLevel: 5 // Default level for manually entered skills
+            }));
+
+            // 2. Fetch latest resume to get resumeSkills
+            const latestResume = await Resume.findOne({ userId }).sort({ uploadedAt: -1 }).lean();
+            const resumeSkillsMap = new Map();
+            if (latestResume && latestResume.parsedData) {
+                const pd = latestResume.parsedData;
+                const matched = pd["Skills Analysis"]?.["Matched Skills"] || pd["skills_analysis"]?.["matched_skills"] || [];
+                const missing = pd["Skills Analysis"]?.["Missing Skills"] || pd["skills_analysis"]?.["missing_skills"] || [];
+                // Matched skills assigned level 8, missing assigned level 2
+                matched.forEach(s => resumeSkillsMap.set(s, 8));
+                missing.forEach(s => resumeSkillsMap.set(s, 2));
+            }
+
+            const resumeSkills = Array.from(resumeSkillsMap.entries()).map(([skill, level]) => ({
+                skill,
+                yourLevel: level
+            }));
+
+            // Merge skills (resume overrides user)
+            const finalSkillMap = new Map();
+            userSkills.forEach(s => finalSkillMap.set(s.skill, s.yourLevel));
+            resumeSkills.forEach(s => finalSkillMap.set(s.skill, s.yourLevel));
+
+            // 3. Fetch requiredSkills based on user's selected jobRole
+            const requiredSkills = [];
+            let jobRoleSkills = [];
+            if (user.jobRole && user.jobRole.jobRoleId) {
+                jobRoleSkills = user.jobRole.jobRoleId.skills || [];
+            } else {
+                // fallback if user has no job role - just use standard skills or the ones from the resume analysis
+                const pd = latestResume?.parsedData;
+                const reqs = [
+                    ...(pd?.["Skills Analysis"]?.["Matched Skills"] || pd?.["skills_analysis"]?.["matched_skills"] || []),
+                    ...(pd?.["Skills Analysis"]?.["Missing Skills"] || pd?.["skills_analysis"]?.["missing_skills"] || [])
+                ];
+                jobRoleSkills = Array.from(new Set(reqs));
+            }
+
+            jobRoleSkills.forEach(skill => {
+                requiredSkills.push({
+                    skill,
+                    requiredLevel: 8 // default required level
+                });
+            });
+
+            // Calculate gaps
+            const strongSkills = [];
+            const gapSkills = [];
+            let totalPossible = requiredSkills.length * 10; // max level is 10
+            let totalAchieved = 0;
+
+            requiredSkills.forEach(reqSkill => {
+                const yourLevel = finalSkillMap.get(reqSkill.skill) || 0;
+                totalAchieved += Math.min(yourLevel, reqSkill.requiredLevel); // cap at required level for alignment
+
+                if (yourLevel >= reqSkill.requiredLevel) {
+                    strongSkills.push({
+                        skill: reqSkill.skill,
+                        yourLevel,
+                        requiredLevel: reqSkill.requiredLevel
+                    });
+                } else {
+                    gapSkills.push({
+                        skill: reqSkill.skill,
+                        yourLevel,
+                        requiredLevel: reqSkill.requiredLevel,
+                        pointsGap: reqSkill.requiredLevel - yourLevel
+                    });
+                }
+            });
+
+            const overallAlignmentPercent = totalPossible > 0 ? Math.round((totalAchieved / totalPossible) * 100) : 0;
+
+            // Generate Learning Resources for gapSkills
+            const learningResources = gapSkills.map(gap => ({
+                skill: gap.skill,
+                category: "Online Course",
+                title: `Master ${gap.skill} from Scratch`,
+                durationHours: Math.floor(Math.random() * 10) + 2, // mock duration 2-11 hours
+                rating: Number((4 + Math.random()).toFixed(1)) // mock rating 4.0 - 5.0
+            }));
+
+            const responsePayload = {
+                userSkills,
+                resumeSkills,
+                requiredSkills,
+                learningResources,
+                strongSkills,
+                gapSkills,
+                overallAlignmentPercent
+            };
+
+            return middleware.sendApiResponse(
+                res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS,
+                "Skill_gap_analysis_fetched_successfully",
+                responsePayload
+            );
+
+        } catch (error) {
+            console.log("Error in skillGapAnalysis: ", error);
             return middleware.sendApiResponse(
                 res, Codes.INTERNAL_ERROR, Codes.RESPONSE_ERROR,
                 "Internal_Server_Error", null

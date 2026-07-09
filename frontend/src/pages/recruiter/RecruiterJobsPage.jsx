@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   fetchRecruiterJobsAPI, 
-  deleteJobAPI 
+  deleteJobAPI,
+  updateJobStatusAPI 
 } from '../../api/recruiterJobsApi';
 import { 
   Plus, Edit2, Trash2, MapPin, Briefcase, 
-  Calendar, FileText, ChevronLeft, ChevronRight, CheckCircle, XCircle 
+  Calendar, FileText, ChevronLeft, ChevronRight, CheckCircle, XCircle, Search, MoreVertical 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 export function RecruiterJobsPage() {
@@ -20,13 +21,16 @@ export function RecruiterJobsPage() {
   const [totalJobs, setTotalJobs] = useState(0);
   const limit = 10;
   
-  // Modal State removed as we use pages now
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [openDropdownId, setOpenDropdownId] = useState(null);
 
   // Fetch Jobs
   const loadJobs = async (page = 1) => {
     try {
       setLoading(true);
-      const res = await fetchRecruiterJobsAPI(page, limit);
+      const res = await fetchRecruiterJobsAPI(page, limit, { search, status: statusFilter, sort: sortOrder });
       
       if (res?.data) {
         if (Array.isArray(res.data)) {
@@ -52,11 +56,22 @@ export function RecruiterJobsPage() {
   };
 
   useEffect(() => {
-    loadJobs(currentPage);
-  }, [currentPage]);
+    const timer = setTimeout(() => {
+      loadJobs(currentPage);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [currentPage, search, statusFilter, sortOrder]);
 
-  const handleDelete = async (jobId) => {
-    if (!window.confirm('Are you sure you want to delete this job?')) return;
+  const handleDelete = async (jobId, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const isConfirmed = window.confirm('Are you sure you want to delete this job?');
+    console.log(isConfirmed)
+    if (!isConfirmed) {
+      return;
+    }
     
     // Optimistic Update
     const originalJobs = [...jobs];
@@ -77,6 +92,17 @@ export function RecruiterJobsPage() {
     navigate(`/recruiter/edit-job/${jobId}`);
   };
 
+  const handleStatusChange = async (jobId, newStatus) => {
+    try {
+      await updateJobStatusAPI(jobId, newStatus);
+      setJobs(jobs.map(job => job._id === jobId ? { ...job, status: newStatus } : job));
+      toast.success('Job status updated');
+    } catch (error) {
+      toast.error('Failed to update status');
+    }
+    setOpenDropdownId(null);
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto p-6 space-y-8">
       {/* Header */}
@@ -92,6 +118,40 @@ export function RecruiterJobsPage() {
           <Plus className="w-5 h-5" />
           Post New Job
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1 sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder="Search jobs..." 
+            value={search}
+            onChange={(e) => {setSearch(e.target.value); setCurrentPage(1);}}
+            className="pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm w-full transition-colors" 
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => {setStatusFilter(e.target.value); setCurrentPage(1);}}
+          className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm cursor-pointer transition-colors"
+        >
+          <option value="all" className="bg-[#0f1723]">All Status</option>
+          <option value="published" className="bg-[#0f1723]">Published</option>
+          <option value="draft" className="bg-[#0f1723]">Draft</option>
+          <option value="closed" className="bg-[#0f1723]">Closed</option>
+        </select>
+        <select
+          value={sortOrder}
+          onChange={(e) => {setSortOrder(e.target.value); setCurrentPage(1);}}
+          className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm cursor-pointer transition-colors"
+        >
+          <option value="newest" className="bg-[#0f1723]">Newest First</option>
+          <option value="oldest" className="bg-[#0f1723]">Oldest First</option>
+          <option value="applications_desc" className="bg-[#0f1723]">Most Applications</option>
+          <option value="applications_asc" className="bg-[#0f1723]">Least Applications</option>
+        </select>
       </div>
 
       {/* Job List */}
@@ -145,9 +205,13 @@ export function RecruiterJobsPage() {
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#10b981]/10 text-[#10b981] text-xs font-semibold">
                           <CheckCircle className="w-3.5 h-3.5" /> Published
                         </span>
+                      ) : job.status === 'closed' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ef4444]/10 text-[#ef4444] text-xs font-semibold">
+                          <XCircle className="w-3.5 h-3.5" /> Closed
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-500/10 text-gray-400 text-xs font-semibold">
-                          <XCircle className="w-3.5 h-3.5" /> Draft
+                          <FileText className="w-3.5 h-3.5" /> Draft
                         </span>
                       )}
                     </td>
@@ -164,12 +228,27 @@ export function RecruiterJobsPage() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(job._id)}
+                          onClick={(e) => handleDelete(job._id, e)}
                           className="p-2 hover:bg-red-500/20 hover:text-red-500 rounded-lg transition-colors text-gray-400"
                           title="Delete Job"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+                        <div className="relative">
+                          <button 
+                            onClick={() => setOpenDropdownId(openDropdownId === job._id ? null : job._id)}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          {openDropdownId === job._id && (
+                            <div className="absolute right-0 mt-2 w-36 bg-[#1e293b] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden text-left">
+                              <button onClick={() => handleStatusChange(job._id, 'published')} className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors">Set Published</button>
+                              <button onClick={() => handleStatusChange(job._id, 'draft')} className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors">Set Draft</button>
+                              <button onClick={() => handleStatusChange(job._id, 'closed')} className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 text-[#ef4444] transition-colors">Close Job</button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

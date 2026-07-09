@@ -64,6 +64,27 @@ const recruiterValidation = {
         jobId: jobIdSchema,
       }),
 
+      updateJobStatusSchema: Joi.object({
+        jobId: jobIdSchema,
+        status: Joi.string().trim().valid("draft", "published", "closed").required(),
+      }),
+
+      fetchJobSchema: Joi.object({
+          page: Joi.number().min(1).default(1),
+          limit: Joi.number().min(1).default(10),
+          status: Joi.string().allow('', null).optional(),
+          sort: Joi.string().allow('', null).optional(),
+          search: Joi.string().allow('', null).optional(),
+      }),
+
+      fetchJobByIdSchema: Joi.object({
+          jobId: jobIdSchema,
+      }),
+
+      updateApplicationStatusSchema: Joi.object({
+          status: Joi.string().trim().valid("applied", "shortlisted", "rejected", "interview", "hired", "Pending").required(),
+      }),
+
 };
 
 export default recruiterValidation;

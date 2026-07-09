@@ -13,9 +13,9 @@ router.put(`/edit-job`, middleware.validateJoi(recruiterValidation.editJobSchema
 
 router.delete(`/delete-job`, middleware.validateJoi(recruiterValidation.deleteJobSchema, true), middleware.allowedRoles('recruiter'), recruiterController.deleteJob);
 
-router.post(`/fetch-job`, middleware.allowedRoles('recruiter'), recruiterController.fetchRecruiterJob);
+router.post(`/fetch-job`, middleware.validateJoi(recruiterValidation.fetchJobSchema, true), middleware.allowedRoles('recruiter'), recruiterController.fetchRecruiterJob);
 
-router.post(`/fetch-job-by-id`, middleware.allowedRoles('recruiter'), recruiterController.fetchRecruiterJobById);
+router.post(`/fetch-job-by-id`, middleware.validateJoi(recruiterValidation.fetchJobByIdSchema, true), middleware.allowedRoles('recruiter'), recruiterController.fetchRecruiterJobById);
 
 router.get(`/dashboard-summary`, middleware.allowedRoles('recruiter'), recruiterController.dashboardSummary);
 
@@ -23,6 +23,7 @@ router.get(`/candidates`, middleware.allowedRoles('recruiter'), recruiterControl
 
 router.get(`/candidates/:id`, middleware.allowedRoles('recruiter'), recruiterController.getCandidateProfile);
 
-router.put(`/candidates/:id/status`, middleware.allowedRoles('recruiter'), recruiterController.updateApplicationStatus);
+router.put(`/candidates/:id/status`, middleware.validateJoi(recruiterValidation.updateApplicationStatusSchema, true), middleware.allowedRoles('recruiter'), recruiterController.updateApplicationStatus);
 
+router.put(`/update-job-status` , middleware.validateJoi(recruiterValidation.updateJobStatusSchema, true), middleware.allowedRoles('recruiter') , recruiterController.updateJobStatus)
 export default router;

@@ -96,7 +96,7 @@ export function CandidateDashboard() {
             <button onClick={() => navigate('/settings')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
               <Settings className="w-5 h-5" />
             </button>
-            <button onClick={() => navigate('/candidate/profile')} className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+            <button onClick={() => navigate('/settings')} className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1f7af9] to-[#bc13fe] flex items-center justify-center text-xs font-bold text-white">
                 {user?.name?.charAt(0) || user?.first_name?.charAt(0) || <User className="w-4 h-4" />}
               </div>

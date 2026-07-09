@@ -1,7 +1,7 @@
 import api from './axios';
 
-export const fetchRecruiterJobsAPI = async (page = 1, limit = 10) => {
-  return await api.post('/recruiter/fetch-job', { page, limit });
+export const fetchRecruiterJobsAPI = async (page = 1, limit = 10, filters = {}) => {
+  return await api.post('/recruiter/fetch-job', { page, limit, ...filters });
 };
 
 export const fetchJobByIdAPI = async (jobId) => {
@@ -19,6 +19,10 @@ export const editJobAPI = async (data) => {
 
 export const deleteJobAPI = async (jobId) => {
   return await api.delete('/recruiter/delete-job', { data: { jobId } });
+};
+
+export const updateJobStatusAPI = async (jobId, status) => {
+  return await api.put('/recruiter/update-job-status', { jobId, status });
 };
 
 

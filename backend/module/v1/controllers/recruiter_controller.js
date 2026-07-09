@@ -19,10 +19,6 @@ const recruiterController = {
         return recruiterModule.generateJobDescription(req, res);
     },
 
-    viewApplication: async (req, res) => {
-        return recruiterModule.viewApplication(req, res);
-    },
-
     fetchRecruiterJob: async (req, res) => {
         return recruiterModule.fetchRecruiterJob(req, res);
     },
@@ -34,6 +30,7 @@ const recruiterController = {
     dashboardSummary: async (req, res) => {
         return recruiterModule.dashboardSummary(req, res);
     },
+
     getCandidates: async (req, res) => {
         return recruiterModule.getCandidates(req, res);
     },
@@ -47,7 +44,9 @@ const recruiterController = {
 
     updateApplicationStatus: async (req , res) => {
         return recruiterModule.updateApplicationStatus(req, res);
-    }
+    },
+
+    
 };
 
 

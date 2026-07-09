@@ -35,6 +35,10 @@ const userController = {
     dashBoard: async (req, res) => {
         return userModule.dashBoard(req, res);
     },
+
+    skillGapAnalysis: async (req, res) => {
+        return userModule.skillGapAnalysis(req, res);
+    },
 };
 
 export default userController;
