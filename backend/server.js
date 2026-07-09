@@ -65,7 +65,7 @@ app.use(cors({
   origin: corsOrigins,
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "token", "Accept-Language"],
+  allowedHeaders: ["Content-Type", "Authorization", "token", "api-key", "Accept-Language"],
 }));
 
 app.use("/api/v1/auth/login", authLimiter);
