@@ -56,6 +56,7 @@ const aiLimiter = rateLimit({
   message: { code: 0, message: "AI_daily_limit_exceeded" },
 });
 
+
 app.use(helmet());
 app.use(globalLimiter);
 app.use(cookieParser());
@@ -68,8 +69,55 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "token", "api-key", "Accept-Language"],
 }));
 
+
+
+/**
+ * @route GET /health
+ * @description Health check endpoint for uptime monitoring services (Render, UptimeRobot, etc.)
+ * @access Public
+ */
+app.get("/", (req, res) => {
+  try {
+    const memoryUsage = process.memoryUsage();
+    
+    // Helper function to format memory in MB
+    const formatMemoryUsage = (data) => `${Math.round(data / 1024 / 1024 * 100) / 100} MB`;
+    
+    const healthData = {
+      success: true,
+      status: "UP",
+      service: "Hire Sense Backend",
+      environment: process.env.NODE_ENV || "development",
+      uptime: process.uptime(),
+      nodeVersion: process.version,
+      memory: {
+        rss: formatMemoryUsage(memoryUsage.rss),
+        heapUsed: formatMemoryUsage(memoryUsage.heapUsed),
+        heapTotal: formatMemoryUsage(memoryUsage.heapTotal)
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    // Return 200 OK immediately without querying the DB
+    res.status(200).json(healthData);
+  } catch (error) {
+    // In case of any unexpected errors, return 503 Service Unavailable
+    res.status(503).json({
+      success: false,
+      status: "DOWN",
+      service: "Hire Sense Backend",
+      timestamp: new Date().toISOString(),
+      error: error.message || "Internal Server Error"
+    });
+  }
+});
+
+
 app.use("/api/v1/auth/login", authLimiter);
 app.use("/api/v1/auth/signup", authLimiter);
+
+// Health check endpoint for uptime monitoring
+
 
 // Middleware to extract language from headers
 app.use(middleware.extractHeaderLanguage);
@@ -84,6 +132,9 @@ app.use("/api/v1/applicant/apply-job", aiLimiter);
 app.use("/api/v1/auth/", authRoutes);
 app.use("/api/v1/recruiter/", recruiterRoutes);
 app.use("/api/v1/applicant/", applicantRoutes);
+
+
+
 
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);
