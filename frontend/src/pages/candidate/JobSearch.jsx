@@ -281,7 +281,8 @@ export function JobSearch() {
   const [localSearch, setLocalSearch] = useState(reduxFilters.search || '');
   const [localFilters, setLocalFilters] = useState({
     location: reduxFilters.location || '',
-    salary: reduxFilters.min_salary || '',
+    salaryMin: reduxFilters.salaryMin || '',
+    salaryMax: reduxFilters.salaryMax || '',
     type: reduxFilters.employmentType || '',
     remote: reduxFilters.is_remote || false,
     experience_level: reduxFilters.experience_level || ''
@@ -300,7 +301,8 @@ export function JobSearch() {
         search: localSearch,
         location: localFilters.location,
         employmentType: localFilters.type,
-        min_salary: localFilters.salary,
+        salaryMin: localFilters.salaryMin,
+        salaryMax: localFilters.salaryMax,
         is_remote: localFilters.remote,
         experience_level: localFilters.experience_level
       }));
@@ -343,17 +345,27 @@ export function JobSearch() {
   const activeFilterChips = [
     localFilters.location && { key: 'location', label: localFilters.location },
     localFilters.experience_level && { key: 'experience_level', label: localFilters.experience_level },
-    localFilters.salary && { key: 'salary', label: `$${Number(localFilters.salary).toLocaleString()}+` },
+    (localFilters.salaryMin || localFilters.salaryMax) && { 
+      key: 'salary', 
+      label: localFilters.salaryMin && localFilters.salaryMax 
+        ? `$${Number(localFilters.salaryMin).toLocaleString()} - $${Number(localFilters.salaryMax).toLocaleString()}`
+        : localFilters.salaryMin ? `$${Number(localFilters.salaryMin).toLocaleString()}+`
+        : `Up to $${Number(localFilters.salaryMax).toLocaleString()}`
+    },
     localFilters.type && { key: 'type', label: localFilters.type },
     localFilters.remote && { key: 'remote', label: 'Remote' },
   ].filter(Boolean);
 
   const clearFilter = (key) => {
-    setLocalFilters(prev => ({ ...prev, [key]: key === 'remote' ? false : '' }));
+    if (key === 'salary') {
+      setLocalFilters(prev => ({ ...prev, salaryMin: '', salaryMax: '' }));
+    } else {
+      setLocalFilters(prev => ({ ...prev, [key]: key === 'remote' ? false : '' }));
+    }
   };
 
   const clearAllFilters = () => {
-    setLocalFilters({ location: '', salary: '', type: '', remote: false, experience_level: '' });
+    setLocalFilters({ location: '', salaryMin: '', salaryMax: '', type: '', remote: false, experience_level: '' });
   };
 
   const toggleSave = (jobId) => {
@@ -434,9 +446,24 @@ export function JobSearch() {
                 <option value="Principal">Principal (15+ years)</option>
                 <option value="Other">Other</option>
               </select>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="number" value={localFilters.salary} onChange={e => setLocalFilters({ ...localFilters, salary: e.target.value })} placeholder="Min Salary" className="w-full pl-10 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm" />
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input type="number" min="0" value={localFilters.salaryMin} onChange={e => {
+                      const val = e.target.value;
+                      if (!val || Number(val) >= 0) setLocalFilters({ ...localFilters, salaryMin: val });
+                    }} placeholder="Min Salary" className="w-full pl-7 pr-2 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm" />
+                </div>
+                <div className="relative flex-1">
+                  <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input type="number" min="0" value={localFilters.salaryMax} onChange={e => {
+                      const val = e.target.value;
+                      if (!val || Number(val) >= 0) setLocalFilters({ ...localFilters, salaryMax: val });
+                    }} placeholder="Max Salary" className={`w-full pl-7 pr-2 py-2 bg-white/5 border rounded-lg focus:outline-none text-sm transition-colors ${
+                      localFilters.salaryMin && localFilters.salaryMax && Number(localFilters.salaryMax) < Number(localFilters.salaryMin)
+                      ? 'border-red-500 focus:border-red-500' : 'border-white/10 focus:border-[#1f7af9]'
+                    }`} />
+                </div>
               </div>
               <select value={localFilters.type} onChange={e => setLocalFilters({ ...localFilters, type: e.target.value })} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm">
                 <option value="">Job Type</option>

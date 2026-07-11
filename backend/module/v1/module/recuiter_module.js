@@ -632,8 +632,20 @@ const recruiterModule = {
                 return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Unauthorized", null);
             }
 
-            applicant.status = status;
-            await applicant.save();
+            // Prevent invalid transitions (e.g. rejected -> pending)
+            if (applicant.status === 'rejected' && status === 'pending') {
+                return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_ERROR, "Invalid_status_transition", null);
+            }
+
+            if (applicant.status !== status) {
+                applicant.statusHistory.push({
+                    status: status,
+                    updatedAt: new Date(),
+                    updatedBy: recruiterId
+                });
+                applicant.status = status;
+                await applicant.save();
+            }
 
             return middleware.sendApiResponse(res, Codes.SUCCESS, Codes.RESPONSE_SUCCESS, "Application_status_updated", applicant);
         } catch (error) {

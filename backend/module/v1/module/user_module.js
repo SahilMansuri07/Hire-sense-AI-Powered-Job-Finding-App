@@ -28,8 +28,11 @@ const buildFilter = (body = {}) => {
         filter.expiriance_level = body.experience_level;
     }
 
-    if (body.min_salary) {
-        filter["salaryRange.min"] = { $gte: Number(body.min_salary) };
+    if (body.salaryMin || body.salaryMax) {
+        // If min and max provided, jobs whose max >= min (they pay at least what candidate wants) 
+        // AND jobs whose min <= max (they don't strictly require paying more than candidate expects)
+        if (body.salaryMin) filter["salaryRange.max"] = { $gte: Number(body.salaryMin) };
+        if (body.salaryMax) filter["salaryRange.min"] = { ...filter["salaryRange.min"], $lte: Number(body.salaryMax) };
     }
 
     if (body.is_remote !== undefined) {
@@ -209,6 +212,7 @@ const userModule = {
                 phone,
                 coverLetter,
                 linkedIn,
+                statusHistory: [{ status: "pending", updatedAt: new Date(), updatedBy: userId }]
             });
             await common.configEmail({
                  email :email ,
@@ -346,9 +350,10 @@ const userModule = {
                 jobTitle:        app.jobId?.jobTitle || "Unknown Position",
                 location:        app.jobId?.location || null,
                 employmentType:  app.jobId?.employmentType || null,
-                status:          app.status || "applied",
+                status:          app.status || "pending",
                 appliedAt:       app.created_at || null,
                 timeAgo:         _getTimeAgo(app.created_at),
+                statusHistory:   app.statusHistory || [],
             }));
 
             return middleware.sendApiResponse(

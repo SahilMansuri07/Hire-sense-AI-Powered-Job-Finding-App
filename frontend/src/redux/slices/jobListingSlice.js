@@ -27,7 +27,8 @@ const initialState = {
     search: '',
     location: '',
     employmentType: '',
-    min_salary: '',
+    salaryMin: '',
+    salaryMax: '',
     is_remote: false,
     experience_level: ''
   },

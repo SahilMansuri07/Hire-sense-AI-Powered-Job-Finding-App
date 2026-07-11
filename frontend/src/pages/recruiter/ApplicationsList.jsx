@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Search, MapPin, Briefcase, Star, Building2, ChevronRight, User } from 'lucide-react';
 import { fetchCandidatesAPI } from '../../api/recruiterJobsApi';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '../../components/ui/pagination';
@@ -10,13 +10,23 @@ export function ApplicationsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  // Update URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+    setSearchParams(params, { replace: true });
+  }, [search, statusFilter, setSearchParams]);
 
   useEffect(() => {
     const loadCandidates = async () => {

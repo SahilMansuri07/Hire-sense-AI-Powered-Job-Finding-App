@@ -10,6 +10,10 @@ const userValidation = {
         jobType: Joi.string().allow('', null).optional(),
         location: Joi.string().allow('', null).optional(),
         experience: Joi.string().allow('', null).optional(),
+        experience_level: Joi.string().allow('', null).optional(),
+        salaryMin: Joi.alternatives().try(Joi.number(), Joi.string()).allow('', null).optional(),
+        salaryMax: Joi.alternatives().try(Joi.number(), Joi.string()).allow('', null).optional(),
+        is_remote: Joi.boolean().allow('', null).optional(),
     }),
 
     applyForJobSchema: Joi.object({

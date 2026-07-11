@@ -59,6 +59,13 @@ const jobApplicantSchema = new mongoose.Schema(
       default: "pending",
       index: true,
     },
+    statusHistory: [
+      {
+        status: { type: String, enum: ["pending", "shortlisted", "rejected"] },
+        updatedAt: { type: Date, default: Date.now },
+        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
+      }
+    ],
     is_active: {
       type: Boolean,
       default: true,
