@@ -47,6 +47,7 @@ export async function extractPdfTextFromPython(fileOrUrl, job_description) {
 
     if (!response.ok) {
       const errorBody = await response.text();
+      console.error(`[PYTHON_API_ERROR] Fetch to ${PYTHON_API_BASE_URL}/analyze failed. Status: ${response.status}. Body: ${errorBody}`);
       throw new Error(`Python analyze endpoint failed (${response.status}): ${errorBody}`);
     }
 
@@ -67,6 +68,7 @@ export async function getAiJobDescription(payload) {
 
   if (!response.ok) {
     const errorBody = await response.text();
+    console.error(`[PYTHON_API_ERROR] Fetch to ${PYTHON_API_BASE_URL}/generate-job-description failed. Status: ${response.status}. Body: ${errorBody}`);
     throw new Error(`AI job generation failed (${response.status}): ${errorBody}`);
   }
 
@@ -94,6 +96,7 @@ export async function extractKeywordsFromPython(fileOrUrl, jobDescription = "") 
 
     if (!response.ok) {
       const errorBody = await response.text();
+      console.error(`[PYTHON_API_ERROR] Fetch to ${PYTHON_API_BASE_URL}/extract-keywords failed. Status: ${response.status}. Body: ${errorBody}`);
       throw new Error(`Python keyword extraction failed (${response.status}): ${errorBody}`);
     }
 
