@@ -55,8 +55,8 @@ const jobApplicantSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["applied", "rejected", "Accepted", "shortlisted"],
-      default: "applied",
+      enum: ["pending", "shortlisted", "rejected"],
+      default: "pending",
       index: true,
     },
     is_active: {

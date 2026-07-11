@@ -6,15 +6,27 @@ export const authStorage = {
     this.clearAllSessions(); // Clear all other roles to prevent leakage
     inMemoryToken = token || null;
     localStorage.setItem(`user_data_${role}`, JSON.stringify(user));
+    if (token) {
+      localStorage.setItem(`auth_token_${role}`, token);
+    }
     localStorage.setItem('active_role', role);
   },
 
   setAccessToken(token) {
     inMemoryToken = token || null;
+    const role = this.getActiveRole();
+    if (role && token) {
+      localStorage.setItem(`auth_token_${role}`, token);
+    }
   },
 
   getAccessToken() {
-    return inMemoryToken;
+    if (inMemoryToken) return inMemoryToken;
+    const role = this.getActiveRole();
+    if (role) {
+      return localStorage.getItem(`auth_token_${role}`);
+    }
+    return null;
   },
 
   getActiveRole() {
@@ -26,10 +38,11 @@ export const authStorage = {
     if (!role) return null;
     
     const userStr = localStorage.getItem(`user_data_${role}`);
+    const token = localStorage.getItem(`auth_token_${role}`) || inMemoryToken;
     if (!userStr) return null;
     
     try {
-      return { role, token: inMemoryToken, user: JSON.parse(userStr) };
+      return { role, token, user: JSON.parse(userStr) };
     } catch {
       return null;
     }

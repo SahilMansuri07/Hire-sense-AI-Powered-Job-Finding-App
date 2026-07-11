@@ -572,7 +572,7 @@ const recruiterModule = {
                 email: applicant.email || 'N/A',
                 phone: applicant.phone || 'N/A',
                 linkedIn: applicant.linkedIn || 'N/A',
-                status: applicant.status || 'applied',
+                status: applicant.status || 'pending',
                 location: resumeInfo?.parsedData?.personal_info?.location || 'N/A',
                 yearsOfExperience: resumeInfo?.parsedData?.total_experience_years || 'N/A',
                 appliedDate: applicant.created_at,
@@ -646,6 +646,9 @@ const recruiterModule = {
         try {
             const { jobId, status } = req.body;
             const recruiterId = req.loginUser.id;
+            console.log("status: ",status);
+            console.log("jobId: ",jobId);
+            console.log("recruiterId: ",recruiterId);
 
             const job = await JobPost.findOne({ _id: jobId, recruiterId: recruiterId, is_delete: false });
             if (!job) {

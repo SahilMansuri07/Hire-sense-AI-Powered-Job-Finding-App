@@ -312,16 +312,22 @@ const common = {
             ? process.env.SMTP_HOST
             : "smtp.gmail.com";
     
-        const transporter = nodemailer.createTransport({
-        service: "gmail",
-        host: smtpHost,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false,
-        auth: {
-            user: smtpUser,
-            pass: smtpPass,
-        },
-        });
+        const isGmail = smtpHost === "smtp.gmail.com";
+        const transportConfig = {
+            host: smtpHost,
+            port: Number(process.env.SMTP_PORT || (isGmail ? 465 : 587)),
+            secure: isGmail ? true : (Number(process.env.SMTP_PORT) === 465),
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        };
+        
+        if (isGmail) {
+            transportConfig.service = "gmail";
+        }
+
+        const transporter = nodemailer.createTransport(transportConfig);
     
         const info = await transporter.sendMail({
         from: mailFrom,

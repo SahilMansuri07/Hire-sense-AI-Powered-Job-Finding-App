@@ -82,7 +82,7 @@ const recruiterValidation = {
       }),
 
       updateApplicationStatusSchema: Joi.object({
-          status: Joi.string().trim().valid("applied", "shortlisted", "rejected", "interview", "hired", "Pending").required(),
+          status: Joi.string().trim().valid("pending", "shortlisted", "rejected").required(),
       }),
 
 };

@@ -378,9 +378,9 @@ const userModule = {
 
             const summary = {
                 totalApplications: applications.length,
-                appliedCount:  applications.filter((a) => a.status === "applied").length,
-                acceptedCount: applications.filter((a) => a.status === "Accepted").length,
-                rejectedCount: applications.filter((a) => a.status === "rejected").length,
+                appliedCount:  applications.filter((a) => ["applied", "pending"].includes((a.status || "").toLowerCase())).length,
+                shortlistedCount: applications.filter((a) => (a.status || "").toLowerCase() === "shortlisted").length,
+                rejectedCount: applications.filter((a) => (a.status || "").toLowerCase() === "rejected").length,
                 totalResumes:  await Resume.countDocuments({ userId }),
             };
 
@@ -448,7 +448,7 @@ const userModule = {
             // 3. Application status counts
             const totalAppliedJobs = applications.length;
             const pending = applications.filter((a) => ["applied", "pending"].includes((a.status || "").toLowerCase())).length;
-            const accepted = applications.filter((a) => (a.status || "").toLowerCase() === "accepted").length;
+            const shortlisted = applications.filter((a) => (a.status || "").toLowerCase() === "shortlisted").length;
             const rejected = applications.filter((a) => (a.status || "").toLowerCase() === "rejected").length;
 
             // 4. Build response
@@ -456,7 +456,7 @@ const userModule = {
                 UserName: user.name || "User",
                 totalAppliedJobs,
                 pending,
-                accepted,
+                shortlisted,
                 rejected,
                 recentAppliedJobs,
             };

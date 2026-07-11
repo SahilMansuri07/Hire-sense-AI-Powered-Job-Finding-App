@@ -1,13 +1,12 @@
 import fs from "fs/promises";
 
-const PYTHON_API_BASE_URL = (process.env.PYTHON_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const PYTHON_API_BASE_URL = (process.env.PYTHON_API_URL).replace(/\/$/, "");
 const PYTHON_INTERNAL_SERVICE_KEY = process.env.PYTHON_INTERNAL_SERVICE_KEY || "";
-
 function getInternalHeaders() {
   if (!PYTHON_INTERNAL_SERVICE_KEY) {
     throw new Error("PYTHON_INTERNAL_SERVICE_KEY is not configured");
   }
-
+  
   return {
     "Content-Type": "application/json",
     Accept: "application/json",

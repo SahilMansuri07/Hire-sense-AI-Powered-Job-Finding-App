@@ -68,7 +68,7 @@ export function ApplicationsList() {
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-[#1f7af9] text-sm cursor-pointer transition-colors"
             >
               <option value="all" className="bg-[#0f1723]">All Status</option>
-              <option value="applied" className="bg-[#0f1723]">Applied</option>
+              <option value="pending" className="bg-[#0f1723]">Pending</option>
               <option value="shortlisted" className="bg-[#0f1723]">Shortlisted</option>
               <option value="rejected" className="bg-[#0f1723]">Rejected</option>
             </select>

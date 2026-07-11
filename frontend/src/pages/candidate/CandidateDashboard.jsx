@@ -60,7 +60,7 @@ export function CandidateDashboard() {
     UserName = 'User',
     totalAppliedJobs = 0,
     pending = 0,
-    accepted = 0,
+    shortlisted = 0,
     rejected = 0,
     recentAppliedJobs = []
   } = data || {};
@@ -129,8 +129,8 @@ export function CandidateDashboard() {
             <p className="text-4xl font-bold text-[#f59e0b]">{pending}</p>
           </div>
           <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#10b981]/50 hover:shadow-lg transition-all">
-            <p className="text-sm text-gray-400 mb-1">Accepted</p>
-            <p className="text-4xl font-bold text-[#10b981]">{accepted}</p>
+            <p className="text-sm text-gray-400 mb-1">Shortlisted</p>
+            <p className="text-4xl font-bold text-[#10b981]">{shortlisted}</p>
           </div>
           <div className="p-6 bg-white/5 backdrop-blur border border-white/10 rounded-2xl hover:border-[#ef4444]/50 hover:shadow-lg transition-all">
             <p className="text-sm text-gray-400 mb-1">Rejected</p>
@@ -179,11 +179,11 @@ export function CandidateDashboard() {
                     </div>
                     <div className="text-right">
                       <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
-                        (job.status || '').toLowerCase() === 'accepted' ? 'bg-[#10b981]/10 border-[#10b981]/20 text-[#10b981]' :
+                        (job.status || '').toLowerCase() === 'shortlisted' ? 'bg-[#10b981]/10 border-[#10b981]/20 text-[#10b981]' :
                         (job.status || '').toLowerCase() === 'rejected' ? 'bg-[#ef4444]/10 border-[#ef4444]/20 text-[#ef4444]' :
                         'bg-[#f59e0b]/10 border-[#f59e0b]/20 text-[#f59e0b]'
                       }`}>
-                        {job.status || 'applied'}
+                        {job.status || 'pending'}
                       </span>
                     </div>
                   </div>

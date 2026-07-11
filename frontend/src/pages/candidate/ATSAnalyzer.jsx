@@ -56,7 +56,6 @@ export function ATSAnalyzer() {
         cloudinaryPublicId: cloudData.public_id,
         job_description: jobDescription
       };
-      console.log(payload)
 
       const res = await uploadResumeAPI(payload);
       if (res?.data) {

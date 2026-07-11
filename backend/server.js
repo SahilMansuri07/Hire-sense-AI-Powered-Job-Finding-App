@@ -116,8 +116,6 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth/login", authLimiter);
 app.use("/api/v1/auth/signup", authLimiter);
 
-// Health check endpoint for uptime monitoring
-
 
 // Middleware to extract language from headers
 app.use(middleware.extractHeaderLanguage);

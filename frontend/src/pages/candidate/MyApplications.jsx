@@ -10,7 +10,7 @@ export function MyApplications() {
   const [statusCounts, setStatusCounts] = useState({
     totalApplications: 0,
     appliedCount: 0,
-    acceptedCount: 0,
+    shortlistedCount: 0,
     rejectedCount: 0
   });
 
@@ -24,7 +24,7 @@ export function MyApplications() {
         setStatusCounts({
           totalApplications: statusRes.data.totalApplications || 0,
           appliedCount: statusRes.data.appliedCount || 0,
-          acceptedCount: statusRes.data.acceptedCount || 0,
+          shortlistedCount: statusRes.data.shortlistedCount || 0,
           rejectedCount: statusRes.data.rejectedCount || 0
         });
       }
@@ -58,8 +58,8 @@ export function MyApplications() {
             <p className="text-sm text-gray-400">In Review</p>
           </div>
           <div className="p-6 bg-white/5 backdrop-blur border border-[#10b981]/30 rounded-2xl text-center">
-            <p className="text-4xl font-bold text-[#10b981] mb-2">{statusCounts.acceptedCount}</p>
-            <p className="text-sm text-gray-400">Accepted</p>
+            <p className="text-4xl font-bold text-[#10b981] mb-2">{statusCounts.shortlistedCount}</p>
+            <p className="text-sm text-gray-400">Shortlisted</p>
           </div>
           <div className="p-6 bg-white/5 backdrop-blur border border-[#ef4444]/30 rounded-2xl text-center">
             <p className="text-4xl font-bold text-[#ef4444] mb-2">{statusCounts.rejectedCount}</p>
@@ -111,10 +111,10 @@ export function MyApplications() {
                   
                   <div className="flex-shrink-0 self-start md:self-center">
                     <span className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize
-                      ${app.status === 'accepted' ? 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/50' : 
+                      ${app.status === 'shortlisted' ? 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/50' : 
                         app.status === 'rejected' ? 'bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/50' : 
                         'bg-[#1f7af9]/20 text-[#1f7af9] border border-[#1f7af9]/50'}`}>
-                      {app.status || 'Applied'}
+                      {app.status || 'Pending'}
                     </span>
                   </div>
                 </div>
