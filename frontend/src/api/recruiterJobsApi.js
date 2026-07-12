@@ -1,42 +1,42 @@
 import api from './axios';
 
 export const fetchRecruiterJobsAPI = async (page = 1, limit = 10, filters = {}) => {
-  return await api.post('/recruiter/fetch-job', { page, limit, ...filters });
+  return await api.post('/v1/recruiter/fetch-job', { page, limit, ...filters });
 };
 
 export const fetchJobByIdAPI = async (jobId) => {
-  return await api.post('/recruiter/fetch-job-by-id', { jobId });
+  return await api.post('/v1/recruiter/fetch-job-by-id', { jobId });
 };
 
 
 export const postJobAPI = async (data) => {
-  return await api.post('/recruiter/post-job', data);
+  return await api.post('/v1/recruiter/post-job', data);
 };
 
 export const editJobAPI = async (data) => {
-  return await api.put('/recruiter/edit-job', data);
+  return await api.put('/v1/recruiter/edit-job', data);
 };
 
 export const deleteJobAPI = async (jobId) => {
-  return await api.delete('/recruiter/delete-job', { data: { jobId } });
+  return await api.delete('/v1/recruiter/delete-job', { data: { jobId } });
 };
 
 export const updateJobStatusAPI = async (jobId, status) => {
-  return await api.put('/recruiter/update-job-status', { jobId, status });
+  return await api.put('/v1/recruiter/update-job-status', { jobId, status });
 };
 
 
 export const generateJobDescriptionAPI = async (data) => {
-  return await api.post('/recruiter/generate-job-description', data);
+  return await api.post('/v1/recruiter/generate-job-description', data);
 };
 
 export const fetchDashboardSummaryAPI = async () => {
-  return await api.get('/recruiter/dashboard-summary');
+  return await api.get('/v1/recruiter/dashboard-summary');
 };
 
 export const fetchCandidatesAPI = async (page = 1, limit = 10, filters = {}) => {
   const { status, sort, search } = filters;
-  let url = `/recruiter/candidates?page=${page}&limit=${limit}`;
+  let url = `/v1/recruiter/candidates?page=${page}&limit=${limit}`;
   if (status) url += `&status=${status}`;
   if (sort) url += `&sort=${sort}`;
   if (search) url += `&search=${search}`;
@@ -44,9 +44,9 @@ export const fetchCandidatesAPI = async (page = 1, limit = 10, filters = {}) => 
 };
 
 export const fetchCandidateProfileAPI = async (id) => {
-  return await api.get(`/recruiter/candidates/${id}`);
+  return await api.get(`/v1/recruiter/candidates/${id}`);
 };
 
 export const updateCandidateStatusAPI = async (id, status) => {
-  return await api.put(`/recruiter/candidates/${id}/status`, { status });
+  return await api.put(`/v1/recruiter/candidates/${id}/status`, { status });
 };

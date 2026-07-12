@@ -15,7 +15,7 @@ let refreshRequest = null;
 async function refreshAccessToken() {
   if (!refreshRequest) {
     refreshRequest = axios
-      .post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true })
+      .post(`${import.meta.env.VITE_API_URL}/v1/auth/refresh`, {}, { withCredentials: true })
       .then((res) => {
         const payload = res?.data;
         const token = payload?.data?.token;
